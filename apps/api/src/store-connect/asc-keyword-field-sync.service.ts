@@ -13,7 +13,11 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadAppMarkets } from '../keywords/app-markets';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
-import { checkKeywordText, KeywordApp } from '../keywords/keywords.support';
+import {
+  checkKeywordText,
+  KeywordApp,
+  trackedTexts,
+} from '../keywords/keywords.support';
 import { homeLocalizationOf } from '../keywords/localization-markets';
 import {
   FieldWriteGuard,
@@ -239,7 +243,11 @@ export class AscKeywordFieldSync {
       if (!(await this.stillFollowing(app)))
         return { fields, changed, stoppedAt, stopped: true };
       const before = stored.get(entry.localization) ?? [];
-      if (samePhrases(before, entry.phrases)) {
+      const trackIn = defaultMarketsOf(app, entry.localization, markets);
+      if (
+        samePhrases(before, entry.phrases) &&
+        (await this.trackedIn(app, entry.phrases, trackIn))
+      ) {
         fields += 1;
         continue;
       }
@@ -248,7 +256,7 @@ export class AscKeywordFieldSync {
           app,
           localization: entry.localization,
           phrases: entry.phrases,
-          markets: defaultMarketsOf(app, entry.localization, markets),
+          markets: trackIn,
           guard: this.followsOf(app),
         });
       } catch (error) {
@@ -348,6 +356,18 @@ export class AscKeywordFieldSync {
         select: { appId: true },
       })
       .then((row) => row !== null);
+  }
+
+  private async trackedIn(
+    app: KeywordApp,
+    phrases: readonly string[],
+    markets: readonly string[],
+  ): Promise<boolean> {
+    for (const market of markets) {
+      const tracked = await trackedTexts(this.prisma, app.id, market);
+      if (phrases.some((phrase) => !tracked.has(phrase))) return false;
+    }
+    return true;
   }
 
   private followsOf(app: KeywordApp): FieldWriteGuard {

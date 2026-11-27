@@ -47,6 +47,7 @@ interface BuildOptions {
   served?: { locale: string; keywords: string }[];
   abroad?: string[];
   saveFailure?: QuotaExceededError | null;
+  untracked?: boolean;
 }
 
 interface KeywordAppRow {
@@ -102,6 +103,17 @@ function build(options: BuildOptions = {}) {
         .fn()
         .mockImplementation(({ where: { id } }: { where: { id: string } }) =>
           Promise.resolve(apps[id] ?? null),
+        ),
+    },
+    trackedKeyword: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue(
+          options.untracked
+            ? []
+            : stored.flatMap(({ phrases }) =>
+                phrases.map((text) => ({ keyword: { text } })),
+              ),
         ),
     },
     keyword: {
@@ -506,6 +518,37 @@ describe('AscKeywordFieldSync.run', () => {
       expect(writer.save).toHaveBeenCalledWith(
         expect.objectContaining({ localization: 'pl', markets: ['pl'] }),
       );
+    });
+
+    it('tracks an unchanged native home field in the home market it now reads as default', async () => {
+      const { service, writer } = build({
+        apps: { [APP.id]: POLISH_APP },
+        stored: [{ localization: 'pl', phrases: ['dziennik'] }],
+        served: [{ locale: 'pl', keywords: 'dziennik' }],
+        untracked: true,
+      });
+
+      await service.run();
+
+      expect(writer.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          localization: 'pl',
+          phrases: ['dziennik'],
+          markets: ['pl'],
+        }),
+      );
+    });
+
+    it('skips an unchanged native home field already tracked at home', async () => {
+      const { service, writer } = build({
+        apps: { [APP.id]: POLISH_APP },
+        stored: [{ localization: 'pl', phrases: ['dziennik'] }],
+        served: [{ locale: 'pl', keywords: 'dziennik' }],
+      });
+
+      await service.run();
+
+      expect(writer.save).not.toHaveBeenCalled();
     });
 
     it('still empties an unserved storefront primary field', async () => {
