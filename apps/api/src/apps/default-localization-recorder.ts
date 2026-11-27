@@ -7,7 +7,7 @@ import {
   ListedApp,
   LocalizedCapture,
 } from './localized-listing-capture.service';
-import { provenNativeDefault } from './native-default';
+import { provenHomeDefault } from './home-default';
 
 export interface CapturedDefault {
   description: string;
@@ -38,7 +38,7 @@ export class DefaultLocalizationRecorder {
       return app.defaultLocalization;
     }
     try {
-      const proven = provenNativeDefault({
+      const proven = provenHomeDefault({
         home: app.country,
         description: listing.description,
         probes: localized.probes,

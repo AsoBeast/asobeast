@@ -10,8 +10,8 @@ import {
   type LanguageEvidence,
 } from '../common/text-language';
 
-export const NATIVE_MIN_HITS = 6;
-export const NATIVE_OVER_ENGLISH = 2;
+export const DEFAULT_MIN_HITS = 6;
+export const DEFAULT_OVER_PRIMARY = 2;
 export const UNLISTED_MIN_TOKENS = 50;
 export const UNLISTED_MAX_ENGLISH_SHARE = 0.05;
 
@@ -20,7 +20,7 @@ export interface LocalizationProbe {
   echoed: boolean;
 }
 
-export interface NativeDefaultProof {
+export interface HomeDefaultProof {
   home: string;
   description: string;
   probes: readonly LocalizationProbe[];
@@ -37,14 +37,14 @@ function bestWordLanguage(evidence: LanguageEvidence): string | null {
   const [first, second] = Object.entries(evidence.hits).sort(
     (a, b) => b[1] - a[1],
   );
-  if (!first || first[1] < NATIVE_MIN_HITS) return null;
+  if (!first || first[1] < DEFAULT_MIN_HITS) return null;
   if (second && second[1] === first[1]) return null;
-  return first[1] >= NATIVE_OVER_ENGLISH * englishHits(evidence)
+  return first[1] >= DEFAULT_OVER_PRIMARY * englishHits(evidence)
     ? first[0]
     : null;
 }
 
-function listedNative(
+function listedDefault(
   candidates: readonly AppStoreLocalization[],
   evidence: LanguageEvidence,
 ): AppStoreLocalization | null {
@@ -53,7 +53,7 @@ function listedNative(
   return winners.length === 1 ? winners[0] : null;
 }
 
-function unlistedNative(
+function unlistedDefault(
   natives: readonly AppStoreLocalization[],
   candidates: readonly AppStoreLocalization[],
   declared: ReadonlySet<string>,
@@ -71,12 +71,12 @@ function unlistedNative(
     : null;
 }
 
-export function provenNativeDefault({
+export function provenHomeDefault({
   home,
   description,
   probes,
   declared,
-}: NativeDefaultProof): AppStoreLocalization | null {
+}: HomeDefaultProof): AppStoreLocalization | null {
   const natives = nativeLocalizations(home);
   const languages = new Set(declared.map(declaredLanguage));
   const candidates = natives.filter(
@@ -88,7 +88,7 @@ export function provenNativeDefault({
   const evidence = languageEvidence(description);
   if (evidence.tokens === 0) return null;
   return (
-    listedNative(candidates, evidence) ??
-    unlistedNative(natives, candidates, languages, evidence)
+    listedDefault(candidates, evidence) ??
+    unlistedDefault(natives, candidates, languages, evidence)
   );
 }

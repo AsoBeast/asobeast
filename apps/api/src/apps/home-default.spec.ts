@@ -1,5 +1,5 @@
 import { type AppStoreLocalization } from '@asobeast/shared';
-import { type LocalizationProbe, provenNativeDefault } from './native-default';
+import { type LocalizationProbe, provenHomeDefault } from './home-default';
 
 const POLISH_DESCRIPTION =
   'Dzienniczek to aplikacja dla uczniów i rodziców. Sprawdzaj oceny, frekwencję i plan lekcji w jednym miejscu. Otrzymuj powiadomienia o nowych ocenach oraz wiadomościach od nauczycieli. Aplikacja działa z dziennikiem szkolnym i jest dostępna dla każdej szkoły, która korzysta z systemu. Wszystkie dane są bezpieczne, a logowanie jest proste i szybkie. Możesz też dodać kilka kont i przełączać się między nimi bez wylogowania.';
@@ -38,9 +38,9 @@ interface Proof {
 }
 
 const proof = ({ home, description, probes = [], declared = [] }: Proof) =>
-  provenNativeDefault({ home, description, probes, declared });
+  provenHomeDefault({ home, description, probes, declared });
 
-describe('provenNativeDefault', () => {
+describe('provenHomeDefault', () => {
   it('proves a polish default listing in poland', () => {
     expect(
       proof({

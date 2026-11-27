@@ -20,7 +20,7 @@ import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
 import { capturedLocalizations } from './market-localizations';
-import { LocalizationProbe } from './native-default';
+import { LocalizationProbe } from './home-default';
 import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
