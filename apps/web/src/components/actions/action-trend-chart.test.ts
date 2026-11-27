@@ -32,6 +32,15 @@ describe("trendChartData", () => {
     expect(data.domain).toEqual([1, 200]);
   });
 
+  it("keeps decimals on the axis of a measured share", () => {
+    expect(
+      trendChartData(
+        trend({ metric: "visibility", direction: "higher_is_better" }),
+        done,
+      ).allowDecimals,
+    ).toBe(true);
+  });
+
   it("uses a fixed scale for scores and the rating", () => {
     const higher = { direction: "higher_is_better" } as const;
 
@@ -68,6 +77,7 @@ describe("trendChartData", () => {
       metricLabel: "Store rule problems",
       reversed: false,
       domain: [0, 3],
+      allowDecimals: false,
     });
     expect(
       trendChartData(trend({ ...lint, points: points([0, 0]) }), done).domain,

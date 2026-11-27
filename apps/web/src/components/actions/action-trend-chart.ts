@@ -24,6 +24,7 @@ export interface TrendChartData {
   metricLabel: string;
   reversed: boolean;
   domain: [number, number] | ["auto", "auto"];
+  allowDecimals: boolean;
   markers: TrendMarker[];
   summary: string;
   plotted: number;
@@ -146,6 +147,7 @@ export function trendChartData(
     metricLabel: TREND_METRIC_LABEL[trend.metric],
     reversed: trend.metric === "position",
     domain: domainFor(trend, rows),
+    allowDecimals: trend.metric !== "lintErrors",
     markers: markersFor(
       item,
       rows.map((row) => row.date),

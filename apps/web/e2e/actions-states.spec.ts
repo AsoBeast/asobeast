@@ -116,6 +116,9 @@ test("a lint action in another market charts its own store rule problems", async
     name: "Store rule problems over time",
   });
   await expect(chart.locator("svg").first()).toBeVisible();
+  await expect(chart.locator(".recharts-yAxis-tick-labels")).not.toContainText(
+    ".",
+  );
   await expect(
     dialog.getByRole("region", { name: "Audit score over time" }),
   ).toHaveCount(0);
