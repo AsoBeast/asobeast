@@ -81,12 +81,12 @@ export default async function MetadataPage({
       screenshotsOptions(id, queryMarket(market, app.country), localization),
     );
   }
-  const [keywordMarkets, assistant, signedIn] = await Promise.all([
+  const [keywordMarkets, assistant, signedInUser] = await Promise.all([
     isAppStore
       ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
       : null,
     getMetadataAssistantStatus().catch(() => null),
-    viewerWhenAnswered(),
+    keywordFields ? viewerWhenAnswered() : null,
     queryClient.prefetchQuery(
       appListingOptions(id, queryMarket(market, app.country)),
     ),
@@ -122,7 +122,7 @@ export default async function MetadataPage({
             draftable={app.isCompetitor !== true}
             hasLocalizations={keywordMarkets !== null}
             keywordFields={keywordFields}
-            ownerWhileLoading={signedIn?.role === "owner"}
+            ownerWhileLoading={signedInUser?.role === "owner"}
           />
         </Suspense>
       </div>

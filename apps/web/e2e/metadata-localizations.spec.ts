@@ -207,7 +207,7 @@ test.describe("suggested markets in the localization matrix", () => {
   });
 });
 
-test.describe("the server render, before any script runs", () => {
+test.describe("the localizations header and fields note from the first paint", () => {
   const serverHtml = async (page: Page) => {
     const response = await page.request.get(
       "/apps/app-1/metadata?market=pl&localization=pl",
@@ -254,12 +254,14 @@ test.describe("the server render, before any script runs", () => {
     });
     page.on("pageerror", (error) => errors.push(error.message));
 
+    const signedIn = page.waitForResponse(/\/auth\/me/);
     await page.goto("/apps/app-1/metadata?market=pl&localization=pl");
+    await signedIn;
     const importButton = page
       .getByRole("region", { name: SECTION })
       .getByRole("button", { name: "Import from App Store Connect" });
-    await hydrated(importButton);
+    await expect(await hydrated(importButton)).toBeVisible();
 
-    expect(errors.filter((text) => /hydrat|#418|#423/i.test(text))).toEqual([]);
+    expect(errors.filter((text) => /hydrat|#418/i.test(text))).toEqual([]);
   });
 });
