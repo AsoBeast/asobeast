@@ -259,8 +259,9 @@ export class ActionsGenerator {
       if (planned) steps.push(detectionStep(planned, row, detection));
     }
 
+    const loaded = new Set(context.apps.map((app) => app.id));
     for (const row of existing.values()) {
-      if (detected.has(row.fingerprint)) continue;
+      if (detected.has(row.fingerprint) || !loaded.has(row.appId)) continue;
       const rule = row.rule;
       if (!isActionRule(rule) || !evaluated.has(rule)) continue;
       const planned = missedWrite(context.workspaceId, row, now);
