@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { normalizeText, tokenize } from '../text';
 import { countChars } from './limits';
 import {
   ARABIC_DECORATION,
@@ -33,6 +34,28 @@ const LEFT_TO_THE_LISTING: Readonly<Record<string, readonly string[]>> = {
   id: ['ada', 'saya', 'go'],
   ro: ['tu', 'meu', 'go'],
   cs: ['pro', 'ten', 'go'],
+  ru: ['мой', 'моя', 'мое', 'моё', 'мои', 'про', 'есть', 'go'],
+  uk: ['мій', 'про', 'go'],
+  ko: [
+    '우리',
+    '모두',
+    '여기',
+    '가장',
+    '무료',
+    '다시',
+    '함께',
+    '관련',
+    '이상',
+    '이하',
+    '경우',
+    '정도',
+    '항상',
+    '모든',
+    'go',
+  ],
+  ar: ['تطبيق', 'مجاني', 'أفضل', 'جديد', 'تحميل', 'رسمي', 'go'],
+  zh: ['免费', '应用', '官方', 'go'],
+  th: ['แอป', 'ฟรี', 'วันนี้', 'go'],
 };
 
 const NEVER_A_FUNCTION_WORD: readonly string[] = [
@@ -53,9 +76,10 @@ const NEVER_A_FUNCTION_WORD: readonly string[] = [
 ];
 
 describe('FUNCTION_WORDS', () => {
-  it('has a list for each of the fifteen languages the store listings are read in', () => {
+  it('has a list for each language the store listings are read in', () => {
     expect(Object.keys(FUNCTION_WORDS).sort()).toEqual(
       [
+        'ar',
         'cs',
         'da',
         'de',
@@ -64,15 +88,31 @@ describe('FUNCTION_WORDS', () => {
         'fr',
         'id',
         'it',
+        'ko',
         'nl',
         'no',
         'pl',
         'pt',
         'ro',
+        'ru',
         'sv',
+        'th',
         'tr',
+        'uk',
+        'zh',
       ].sort(),
     );
+  });
+
+  it.each([
+    ['ru', 159],
+    ['uk', 145],
+    ['ko', 59],
+    ['ar', 111],
+    ['zh', 36],
+    ['th', 35],
+  ])('holds the words of %s once each', (language, size) => {
+    expect(FUNCTION_WORDS[language].size).toBe(size);
   });
 
   it.each(LISTS)(
@@ -80,11 +120,27 @@ describe('FUNCTION_WORDS', () => {
     (_, words) => {
       expect(
         words.filter(
-          (word) => word !== word.toLowerCase() || countChars(word) < 2,
+          (word) =>
+            word !== word.toLowerCase() ||
+            (countChars(word) < 2 && !CHINESE_PARTICLES.has(word)),
         ),
       ).toEqual([]);
     },
   );
+
+  it.each(LISTS)('keeps every word of %s one normalized token', (_, words) => {
+    expect(
+      words.filter(
+        (word) => word !== normalizeText(word) || tokenize(word).length !== 1,
+      ),
+    ).toEqual([]);
+  });
+
+  it.each(LISTS)('keeps the tatweel and the harakat out of %s', (_, words) => {
+    expect(
+      words.filter((word) => word.replace(ARABIC_DECORATION, '') !== word),
+    ).toEqual([]);
+  });
 
   it.each(LISTS)(
     'leaves the names that spell a function word to the listing in %s',
@@ -155,6 +211,12 @@ describe('functionWordTest', () => {
     ['id', ['yang', 'dan', 'di', 'untuk', 'dengan']],
     ['ro', ['și', 'şi', 'sau', 'pentru', 'cu']],
     ['cs', ['se', 'je', 'ale', 'nebo', 'při']],
+    ['ru', ['не', 'что', 'на', 'для', 'это', 'при', 'без', 'свой']],
+    ['uk', ['та', 'але', 'що', 'для', 'не', 'щоб']],
+    ['ko', ['그리고', '하지만', '합니다', '위한', '입니다']],
+    ['ar', ['في', 'من', 'على', 'أكثر', 'هذان', 'حول', 'لكن']],
+    ['zh', ['我们', '一个', '的', '我']],
+    ['th', ['ที่', 'และ', 'ไม่']],
   ])('knows the function words of %s', (language, words) => {
     const isFunctionWord = functionWordTest([language]);
 
@@ -180,6 +242,22 @@ describe('functionWordTest', () => {
   it('does not read a language that was not asked for', () => {
     expect(functionWordTest(['es'])('der')).toBe(false);
     expect(functionWordTest(['de'])('el')).toBe(false);
+  });
+
+  it('reads an arabic word written with tatweel or harakat as the bare word', () => {
+    const isFunctionWord = functionWordTest(['ar']);
+
+    expect(
+      ['أكـثر', 'أَكْثَر', 'فِي'].filter((word) => !isFunctionWord(word)),
+    ).toEqual([]);
+    expect(isFunctionWord('طَعَام')).toBe(false);
+  });
+
+  it('keeps the russian and the ukrainian lists apart', () => {
+    expect(functionWordTest(['ru'])('что')).toBe(true);
+    expect(functionWordTest(['ru'])('чи')).toBe(false);
+    expect(functionWordTest(['uk'])('чи')).toBe(true);
+    expect(functionWordTest(['uk'])('что')).toBe(false);
   });
 });
 
