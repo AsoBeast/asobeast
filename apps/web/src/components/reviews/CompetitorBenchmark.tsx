@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueries, useQuery } from "@tanstack/react-query";
-import type { Store } from "@asobeast/shared";
+import type { RatingsHistory, Store } from "@asobeast/shared";
 import {
   failedRead,
   InlineQueryError,
@@ -17,6 +17,7 @@ import {
   BENCHMARK_MIN_COMPETITORS,
   benchmarkOutcome,
   benchmarkTargets,
+  type CompetitorBenchmark,
 } from "./competitor-benchmark";
 import { newRatingsAverageFor } from "./new-ratings-average";
 import {
@@ -24,6 +25,14 @@ import {
   NEW_RATINGS_GUIDE,
   tooFewCompetitors,
 } from "./new-ratings-copy";
+
+const figureOf = (
+  store: Store,
+  history: RatingsHistory | undefined,
+): number | null =>
+  history
+    ? (newRatingsAverageFor(store, history.points)?.average ?? null)
+    : null;
 
 function ReservedLine() {
   return <span aria-hidden className="block h-lh text-body" />;
@@ -56,6 +65,34 @@ const retryOf = (reads: readonly RetryableRead[]): RetryableRead => ({
   refetch: () => Promise.all(reads.map((read) => read.refetch())),
 });
 
+function MedianText({
+  benchmark,
+  days,
+  own,
+}: {
+  benchmark: CompetitorBenchmark;
+  days: number;
+  own: number | null;
+}) {
+  const [lead, value, middle] = benchmarkParts(
+    benchmark.median,
+    benchmark.count,
+    days,
+    own,
+  );
+  return (
+    <span>
+      <span>{`${lead} `}</span>
+      <GradedNumber
+        value={formatRating(value)}
+        grade={grade("rating", value)}
+        label="Competitors' median new ratings average"
+      />
+      <span>{` ${middle}. `}</span>
+    </span>
+  );
+}
+
 export function CompetitorBenchmark({
   id,
   store,
@@ -86,11 +123,7 @@ export function CompetitorBenchmark({
 
   const failed = reads.filter(failedRead);
   const outcome = benchmarkOutcome({
-    averages: reads.map((read) =>
-      read.data
-        ? (newRatingsAverageFor(store, read.data.points)?.average ?? null)
-        : null,
-    ),
+    averages: reads.map((read) => figureOf(store, read.data)),
     loading: reads.filter(
       (read) => read.data === undefined && !failedRead(read),
     ).length,
@@ -106,33 +139,18 @@ export function CompetitorBenchmark({
       />
     );
   }
-  if (outcome.kind === "too-few") {
-    return (
-      <p key="too-few" className="text-body">
-        <span>{`${tooFewCompetitors} `}</span>
-        <BenchmarkHelp />
-      </p>
-    );
-  }
-  const ownAverage = own.data
-    ? (newRatingsAverageFor(store, own.data.points)?.average ?? null)
-    : null;
-  const { median, count } = outcome.benchmark;
-  const [lead, value, middle] = benchmarkParts(
-    median,
-    count,
-    presetDays(range),
-    ownAverage,
-  );
   return (
-    <p key="median" className="text-body">
-      <span>{`${lead} `}</span>
-      <GradedNumber
-        value={formatRating(value)}
-        grade={grade("rating", value)}
-        label="Competitors' median new ratings average"
-      />
-      <span>{` ${middle}. `}</span>
+    <p className="text-body">
+      {outcome.kind === "median" ? (
+        <MedianText
+          key="median"
+          benchmark={outcome.benchmark}
+          days={presetDays(range)}
+          own={figureOf(store, own.data)}
+        />
+      ) : (
+        <span key="too-few">{`${tooFewCompetitors} `}</span>
+      )}
       <BenchmarkHelp />
     </p>
   );

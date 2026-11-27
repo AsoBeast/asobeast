@@ -159,6 +159,48 @@ test("compares google play new ratings with competitors", async ({ page }) => {
   await expect(benchmarkSentence(page)).toContainText("(median of 3)");
 });
 
+test("keeps focus on the help when the benchmark gains a third figure", async ({
+  page,
+}) => {
+  let upgraded = false;
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.clock.install();
+  await page.route(RIVAL_HISTORY, async (route) => {
+    if (!upgraded) return route.continue();
+    await held;
+    const url = new URL(route.request().url());
+    url.pathname = url.pathname.replace(
+      `/apps/${BENCHMARK_ID_PREFIX}4/`,
+      `/apps/${BENCHMARK_ID_PREFIX}3/`,
+    );
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  await page.goto(reviewsOf(APP_BENCHMARK_THIN_ID));
+  const tooFew = page.getByText(
+    "Fewer than three of your tracked competitors have enough new ratings to compare.",
+  );
+  await expect(tooFew).toBeVisible();
+  const ranges = page.getByRole("tablist", { name: "Date range" });
+
+  await page.clock.fastForward(31_000);
+  await ranges.getByRole("tab", { name: "90d" }).click();
+  await expect(page.getByText(/over 90 days/).first()).toBeVisible();
+  upgraded = true;
+  await ranges.getByRole("tab", { name: "30d" }).click();
+  await expect(tooFew).toBeVisible();
+  const help = page.getByRole("button", {
+    name: "About the competitor benchmark",
+  });
+  await help.focus();
+  release();
+
+  await expect(benchmarkSentence(page)).toContainText("(median of 3)");
+  await expect(help).toBeFocused();
+});
+
 test("draws the benchmark from the competitor list the page already read", async ({
   page,
 }) => {
