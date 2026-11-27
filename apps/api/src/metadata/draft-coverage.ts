@@ -9,6 +9,7 @@ import {
   KEYWORD_BUCKETS,
   KeywordBucket,
   KeywordClass,
+  defaultLocalizationIn,
   keywordFieldLocalizations,
   parseKeywordField,
   targetSlotRole,
@@ -17,6 +18,7 @@ import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
 import { readsKeywordField } from '../keywords/localization-markets';
 import {
   CoverageSources,
+  JudgedApp,
   judgeKeywordCoverage,
   KeywordCoverage,
 } from './keyword-coverage-judge';
@@ -41,10 +43,7 @@ export interface PreviewableKeyword {
   keywordClass?: KeywordClass;
 }
 
-interface DraftApp {
-  store: Store;
-  country: string;
-}
+type DraftApp = JudgedApp;
 
 const EMPTY_TEXTS: ListingTexts = {
   id: '',
@@ -88,6 +87,7 @@ const withLocalization = (
 
 function withAppStoreDraft(
   sources: CoverageSources,
+  app: DraftApp,
   localization: AppStoreLocalization,
   draft: ListingDraftTexts,
 ): CoverageSources {
@@ -95,10 +95,9 @@ function withAppStoreDraft(
   const localized = new Map(sources.localized);
   const keywordFields = new Map(sources.keywordFields);
   for (const [country, listing] of sources.listings) {
-    const read = keywordFieldLocalizations(country);
-    if (read[0] === localization) {
+    if (defaultLocalizationIn(app, country) === localization) {
       listings.set(country, mergeTexts(listing, draft));
-    } else if (read.includes(localization)) {
+    } else if (keywordFieldLocalizations(country).includes(localization)) {
       localized.set(
         country,
         withLocalization(
@@ -125,7 +124,7 @@ export function withDraft(
   draft: ListingDraftTexts,
 ): CoverageSources {
   if (target.store === Store.APP_STORE) {
-    return withAppStoreDraft(sources, target.localization, draft);
+    return withAppStoreDraft(sources, app, target.localization, draft);
   }
   const country = resolvedCountry(app, sources, target.country);
   const listing = sources.listings.get(country);
@@ -258,7 +257,7 @@ export function draftedListing(
   const country = resolvedCountry(app, drafted, market);
   if (
     target.store === Store.GOOGLE_PLAY ||
-    keywordFieldLocalizations(country)[0] === target.localization
+    defaultLocalizationIn(app, country) === target.localization
   ) {
     return drafted.listings.get(country);
   }

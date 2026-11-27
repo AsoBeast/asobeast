@@ -8979,7 +8979,7 @@
             ],
             "type": "string",
             "example": "en-US",
-            "description": "The App Store localization the draft rewrites. Defaults to the default localization of the home storefront. App Store only."
+            "description": "The App Store localization the draft rewrites. Defaults to the home localization, the one the home listing is written in. App Store only."
           },
           "country": {
             "type": "string",

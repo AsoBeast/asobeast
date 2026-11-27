@@ -4,9 +4,9 @@ import {
   type KeywordMarkSurface,
   type KeywordWordMatch,
 } from '@asobeast/shared';
-import { Store } from '@prisma/client';
 import {
   CoverageSources,
+  JudgedApp,
   keywordSurfaces,
 } from '../metadata/keyword-coverage-judge';
 import type { Surface } from '../metadata/localized-coverage';
@@ -192,7 +192,7 @@ function bestFinder(
 }
 
 export function keywordMarker(
-  app: { store: Store; country: string },
+  app: JudgedApp,
   sources: CoverageSources,
 ): KeywordMarker {
   const finders = new Map<string, WordFinder[]>();

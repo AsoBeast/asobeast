@@ -174,6 +174,8 @@ export class KeywordBreakdownService {
       id: app.id,
       name: app.name,
       iconUrl: app.iconUrl,
+      country: app.country,
+      defaultLocalization: app.defaultLocalization,
       listing,
       localized,
     };

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
   assertStorefront,
-  keywordFieldLocalizations,
+  localizationReadOrder,
   MarketKeywordFields,
   SplitPhrase,
 } from '@asobeast/shared';
@@ -80,12 +80,13 @@ export class MarketKeywordFieldsService {
       [...fields].filter(([, phrases]) => phrases.length > 0),
     );
     const groups = localizationGroups(
-      keywordFieldLocalizations(market),
+      localizationReadOrder(app, market),
       judgingSurfaces(
         {
           store: Store.APP_STORE,
           country: market,
           home: market === home,
+          defaultLocalization: app.defaultLocalization,
           listing: listings.get(market),
           captured: localized.get(market) ?? [],
         },

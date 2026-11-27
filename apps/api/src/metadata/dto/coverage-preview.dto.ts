@@ -25,7 +25,7 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     example: 'en-US',
     enum: APP_STORE_LOCALIZATION_IDS,
     description:
-      'The App Store localization the draft rewrites. Defaults to the default localization of the home storefront. App Store only.',
+      'The App Store localization the draft rewrites. Defaults to the home localization, the one the home listing is written in. App Store only.',
   })
   @ValidateIf(isPresent)
   @IsIn(APP_STORE_LOCALIZATION_IDS)

@@ -4,7 +4,7 @@ import {
   type KeywordBreakdownField,
   type KeywordBreakdownListing,
   type KeywordBreakdownRating,
-  keywordFieldLocalizations,
+  defaultLocalizationIn,
   readLocalizations,
 } from '@asobeast/shared';
 import type { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
@@ -32,6 +32,8 @@ export interface BreakdownSubject {
   id: string;
   name: string | null;
   iconUrl: string | null;
+  country: string;
+  defaultLocalization: string | null;
   isYou: boolean;
   listing: BreakdownListing | null;
   localized: readonly LocalizedTexts[];
@@ -89,6 +91,7 @@ function listingsOf(
       store,
       country: market,
       home: subject.isYou && market === home,
+      defaultLocalization: subject.defaultLocalization,
       listing: subject.listing?.texts,
       captured: subject.localized,
     },
@@ -103,7 +106,10 @@ function listingsOf(
       : [
           judgeListing(
             appStore
-              ? keywordFieldLocalizations(subject.listing?.country ?? market)[0]
+              ? defaultLocalizationIn(
+                  subject,
+                  subject.listing?.country ?? market,
+                )
               : null,
             appStore ? 'default' : null,
             judged(own, context),
@@ -130,7 +136,10 @@ function unreadOf(
     subject.localized.map((entry) => entry.localization),
   );
   const searched = subject.isYou
-    ? capturedLocalizations(market, subject.shipped)
+    ? capturedLocalizations(market, subject.shipped).filter(
+        (localization) =>
+          localization !== defaultLocalizationIn(subject, market),
+      )
     : readLocalizations(market).slice(1);
   return searched.filter((localization) => !captured.has(localization));
 }

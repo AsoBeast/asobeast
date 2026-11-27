@@ -121,6 +121,50 @@ describe('judgingSurfaces', () => {
     });
   });
 
+  it('joins the native home field with the default listing', () => {
+    const { surfaces, localized } = judgingSurfaces(
+      {
+        store: Store.APP_STORE,
+        country: 'pl',
+        home: true,
+        defaultLocalization: 'pl',
+        listing,
+        captured: [],
+      },
+      fieldPhrases([
+        { localization: 'pl', phrases: ['nawyki'] },
+        { localization: 'en-GB', phrases: ['habit'] },
+      ]),
+    );
+
+    expect(surfaces.at(-1)).toEqual({ field: 'keywordField', value: 'nawyki' });
+    expect(localized).toEqual([
+      {
+        localization: 'en-GB',
+        surfaces: [{ field: 'keywordField', value: 'habit' }],
+      },
+    ]);
+  });
+
+  it('keeps the storefront order for the same app outside its home market', () => {
+    const { surfaces } = judgingSurfaces(
+      {
+        store: Store.APP_STORE,
+        country: 'pl',
+        home: false,
+        defaultLocalization: 'pl',
+        listing,
+        captured: [],
+      },
+      fieldPhrases([
+        { localization: 'pl', phrases: ['nawyki'] },
+        { localization: 'en-GB', phrases: ['habit'] },
+      ]),
+    );
+
+    expect(surfaces.at(-1)).toEqual({ field: 'keywordField', value: 'habit' });
+  });
+
   it('judges a google play listing on its own fields only', () => {
     const { surfaces, localized } = judgingSurfaces(
       {

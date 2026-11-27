@@ -60,7 +60,7 @@ function refuseOverlongText(request: CoveragePreviewRequest): void {
 }
 
 function appStoreTarget(
-  app: { country: string },
+  app: KeywordApp,
   request: CoveragePreviewRequest,
 ): DraftTarget {
   if (request.shortDescription !== undefined) {
@@ -75,8 +75,7 @@ function appStoreTarget(
   }
   return {
     store: Store.APP_STORE,
-    localization:
-      request.localization ?? homeLocalizationOf({ country: app.country }),
+    localization: request.localization ?? homeLocalizationOf(app),
   };
 }
 

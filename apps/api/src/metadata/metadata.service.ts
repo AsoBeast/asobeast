@@ -16,6 +16,7 @@ import { competitorNames } from './competitor-names';
 import { loadCoverageSources } from './coverage-sources';
 import {
   CoverageSources,
+  JudgedApp,
   judgeKeywordCoverage,
 } from './keyword-coverage-judge';
 import {
@@ -160,7 +161,7 @@ export class MetadataService {
   }
 
   private judgeCoverage(
-    app: { store: Store; country: string },
+    app: JudgedApp,
     active: TrackedKeywordItem[],
     sources: CoverageSources,
   ): JudgedCoverageRow[] {

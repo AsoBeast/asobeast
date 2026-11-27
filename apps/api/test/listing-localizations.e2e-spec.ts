@@ -8,8 +8,11 @@ import {
   AppLocalizationsResult,
   AppScreenshots,
   ChangeTimeline,
+  CoveragePreviewResult,
+  KeywordBreakdown,
   KeywordFieldResult,
   ListingMarket,
+  MarketKeywordFields,
   MetadataAuditResult,
   SnapshotDiffResult,
   TrackedKeywordItem,
@@ -858,6 +861,112 @@ describe('Native localizations of a listing (e2e)', () => {
       await api
         .get(`/apps/${appId}/metadata/audit?country=pl&localization=pl`)
         .expect(404);
+    });
+
+    const trackPolish = async (appId: string, keywords: string[]) => {
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords, country: 'pl' })
+        .expect(201);
+      const listed = (
+        await api.get(`/apps/${appId}/keywords`).query({ country: 'pl' })
+      ).body as TrackedKeywordItem[];
+      return new Map(listed.map((item) => [item.text, item]));
+    };
+
+    const savePolishField = (appId: string, text: string) =>
+      api
+        .put(`/apps/${appId}/keyword-fields/pl`)
+        .send({ text, trackIn: [] })
+        .expect(200);
+
+    it('covers a polish keyword split between the polish title and the polish field', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['ucznia frekwencja']);
+      await savePolishField(appId, 'frekwencja');
+
+      const audit = (await api.get(`/apps/${appId}/metadata/audit`).expect(200))
+        .body as MetadataAuditResult;
+
+      expect(
+        audit.coverage.find((row) => row.text === 'ucznia frekwencja'),
+      ).toMatchObject({ uncovered: false });
+    });
+
+    it('flags the split polish keyword covered in the keywords table', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['ucznia frekwencja']);
+      await savePolishField(appId, 'frekwencja');
+
+      const listed = (
+        await api.get(`/apps/${appId}/keywords`).query({ country: 'pl' })
+      ).body as TrackedKeywordItem[];
+
+      expect(
+        listed.find((item) => item.text === 'ucznia frekwencja')?.uncovered,
+      ).toBe(false);
+    });
+
+    it('previews a polish draft as the default listing', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['dzienniczek']);
+
+      const preview = (
+        await api
+          .post(`/apps/${appId}/metadata/coverage-preview`)
+          .send({ localization: 'pl', title: 'Plan lekcji' })
+          .expect(200)
+      ).body as CoveragePreviewResult;
+
+      expect(
+        preview.keywords.find((item) => item.text === 'dzienniczek')?.change,
+      ).toBe('lost');
+    });
+
+    it('labels the default group of the keyword field diagnostics polish', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['ucznia frekwencja']);
+      await api
+        .put(`/apps/${appId}/keyword-fields/en-GB`)
+        .send({ text: 'frekwencja', trackIn: [] })
+        .expect(200);
+
+      const market = (
+        await api
+          .get(`/apps/${appId}/keyword-fields/market`)
+          .query({ country: 'pl' })
+          .expect(200)
+      ).body as MarketKeywordFields;
+
+      expect(
+        market.splitPhrases.find(
+          (phrase) => phrase.phrase === 'ucznia frekwencja',
+        )?.parts,
+      ).toEqual([
+        { word: 'ucznia', localizations: ['pl'] },
+        { word: 'frekwencja', localizations: ['en-GB'] },
+      ]);
+    });
+
+    it('labels the default listing of the breakdown polish', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      const tracked = await trackPolish(appId, ['ucznia frekwencja']);
+      const keywordId = tracked.get('ucznia frekwencja')?.keywordId;
+
+      const breakdown = (
+        await api
+          .get(`/apps/${appId}/keywords/${keywordId}/breakdown`)
+          .expect(200)
+      ).body as KeywordBreakdown;
+      const you = breakdown.apps.find((each) => each.isYou);
+
+      expect(you?.listings[0]).toMatchObject({ localization: 'pl' });
+      expect(you?.unread).not.toContain('pl');
     });
 
     it('leaves the default alone when the polish lookup fails', async () => {
