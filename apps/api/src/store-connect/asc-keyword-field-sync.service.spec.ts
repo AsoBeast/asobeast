@@ -489,6 +489,35 @@ describe('AscKeywordFieldSync.run', () => {
     expect(actions.request).not.toHaveBeenCalled();
   });
 
+  describe('an english app whose home is english (u.k.) in germany', () => {
+    const GERMAN_APP = { ...APP, country: 'de', defaultLocalization: 'en-GB' };
+
+    it('keeps the english (u.k.) home field and the german field when the console serves only english (u.s.)', async () => {
+      const { service, writer } = build({
+        apps: { [APP.id]: GERMAN_APP },
+        stored: [
+          { localization: 'en-GB', phrases: ['diary'] },
+          { localization: 'de', phrases: ['tagebuch'] },
+        ],
+        served: [{ locale: 'en-US', keywords: 'diary,journal' }],
+      });
+
+      await service.run();
+
+      expect(writer.remove).not.toHaveBeenCalled();
+      expect(writer.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          localization: 'en-US',
+          phrases: ['diary', 'journal'],
+          markets: [],
+        }),
+      );
+      expect(
+        writer.save.mock.calls.map(([save]) => save.localization).sort(),
+      ).toEqual(['de', 'en-GB', 'en-US']);
+    });
+  });
+
   describe('an app whose home listing is written in polish', () => {
     const POLISH_APP = { ...APP, country: 'pl', defaultLocalization: 'pl' };
 

@@ -594,3 +594,88 @@ describe('LocalizedListingCapture', () => {
     });
   });
 });
+
+describe('the suspect of a home listing', () => {
+  const englishDefault = {
+    ...ENGLISH,
+    description:
+      'The diary is an app for students and their parents. Check your grades, attendance and timetable in one place. Get a notice about new grades and about messages from your teachers. The app works with the school register and is open to every school that uses the system.',
+    raw: { screenshots: [shot(1), shot(2)], languages: ['EN'] },
+  };
+  const germanDefault = {
+    ...ENGLISH,
+    description:
+      'Das Tagebuch ist eine App für Schüler und ihre Eltern. Sieh dir deine Noten, die Anwesenheit und den Stundenplan an einem Ort an. Die App arbeitet mit dem Klassenbuch der Schule und ist für jede Schule offen, die das System nutzt.',
+    raw: { screenshots: [shot(1), shot(2)], languages: ['DE', 'EN'] },
+  };
+  const german = { ...APP, country: 'de' };
+  const localizedCalls = (getApp: jest.Mock) =>
+    (getApp.mock.calls as unknown[][]).filter((call) => call[2] !== undefined);
+
+  it('probes english (u.k.) at home in germany when the default reads english', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(englishDefault));
+    const { capture } = build({ getApp });
+
+    const captured = await capture.capture(german, 'de', englishDefault);
+
+    expect(getApp.mock.calls).toEqual([['6657987209', 'de', 'en-GB']]);
+    expect(captured.probes).toEqual([{ localization: 'en-GB', echoed: true }]);
+  });
+
+  it('probes nothing more when the default reads as the storefront language', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(germanDefault));
+    const { capture } = build({ getApp });
+
+    await capture.capture(german, 'de', germanDefault);
+
+    expect(localizedCalls(getApp)).toEqual([]);
+  });
+
+  it('probes no suspect in a market capture', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(englishDefault));
+    const { capture } = build({ getApp });
+
+    await capture.capture({ ...APP, country: 'fr' }, 'de', englishDefault);
+
+    expect(localizedCalls(getApp)).toEqual([]);
+  });
+
+  it('probes no suspect for a competitor', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(englishDefault));
+    const { capture } = build({ getApp });
+
+    await capture.capture(
+      { ...german, isCompetitor: true },
+      'de',
+      englishDefault,
+    );
+
+    expect(getApp).not.toHaveBeenCalled();
+  });
+
+  it('probes nothing for a google play app', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(englishDefault));
+    const { capture } = build({ getApp });
+
+    await capture.capture(
+      { ...german, store: Store.GOOGLE_PLAY },
+      'de',
+      englishDefault,
+    );
+
+    expect(getApp).not.toHaveBeenCalled();
+  });
+
+  it('probes a recorded default once', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(englishDefault));
+    const { capture } = build({ getApp });
+
+    await capture.capture(
+      { ...german, defaultLocalization: 'en-GB' },
+      'de',
+      englishDefault,
+    );
+
+    expect(getApp.mock.calls).toEqual([['6657987209', 'de', 'en-GB']]);
+  });
+});
