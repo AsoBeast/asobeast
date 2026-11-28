@@ -216,7 +216,7 @@ describe('The home localization App Store Connect serves (e2e)', () => {
   it('queues the import once the refresh renames the home and tracks its phrases in germany', async () => {
     const appId = await followingClassB();
 
-    const queued = await storeConnect().getJobs(['wait', 'paused', 'delayed']);
+    const queued = await storeConnect().getJobs(['wait', 'delayed']);
     expect(queued).toHaveLength(1);
     await expect(trackedIn(appId, 'de')).resolves.not.toContain('calendar');
 

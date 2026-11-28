@@ -107,8 +107,8 @@ const echoed = (...tags: AppStoreLocalization[]): LocalizationProbe[] =>
 interface Proof {
   home: string;
   description: string;
-  probes?: LocalizationProbe[];
-  declared?: string[];
+  probes?: readonly LocalizationProbe[];
+  declared?: readonly string[];
   consoleListing?: ConsoleListing | null;
 }
 
