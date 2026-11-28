@@ -8,7 +8,6 @@ import {
   isStorefront,
   tokenize,
   parseKeywordField,
-  readsLocalization,
   storefrontsReading,
   type AppDetail,
   type AppLocalizationItem,
@@ -191,7 +190,8 @@ export function unlistedHome(
   result: Pick<AppLocalizationsResult, "home" | "localizations">,
 ): AppStoreLocalization | null {
   const home = result.localizations.find((item) => item.origin === "home");
-  return home && !readsLocalization(result.home, home.localization)
+  return home &&
+    !keywordFieldLocalizations(result.home).includes(home.localization)
     ? home.localization
     : null;
 }

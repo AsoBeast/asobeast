@@ -825,6 +825,7 @@ describe("unlistedHome", () => {
     ["de", "pl", "pl"],
     ["de", "en-GB", null],
     ["pl", "pl", null],
+    ["zz", "en-GB", null],
   ] as const)(
     "names a %s home localization %s the storefront does not list: %s",
     (home, localization, expected) => {
