@@ -35,6 +35,7 @@ import {
   LocalizedRegistry,
   PL_APP_URL,
   POLISH,
+  POLISH_MYTHS,
   POLISH_ONLY,
   US_APP_URL,
 } from './helpers/localized-store';
@@ -1326,6 +1327,59 @@ describe('Native localizations of a listing (e2e)', () => {
       ).body as CoveragePreviewResult;
 
       expect(preview.markets).toContain('de');
+    });
+  });
+
+  describe('a home listing in a language its storefront does not read', () => {
+    it('records polish as the home localization of a polish only app in germany', async () => {
+      registry.listings.set('de:default', POLISH_MYTHS);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
+      const items = await localizationItems(appId);
+      expect(items[0]).toMatchObject({
+        localization: 'pl',
+        origin: 'home',
+        readBy: [{ country: 'de', role: 'default', home: true }],
+      });
+      expect(items.map((item) => item.localization)).not.toContain('de');
+    });
+
+    it('keeps a german function word that is a polish word in the seeds', async () => {
+      registry.listings.set('de:default', POLISH_MYTHS);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      const texts = (
+        (await api.get(`/apps/${appId}/keywords`).expect(200))
+          .body as TrackedKeywordItem[]
+      ).map((keyword) => keyword.text);
+      expect(texts.some((text) => text.split(' ').includes('mit'))).toBe(true);
+    });
+
+    it('asks the store for no localization to prove it', async () => {
+      registry.listings.set('de:default', POLISH_MYTHS);
+
+      await importFrom(DE_APP_URL);
+
+      expect(
+        registry.calls.filter(
+          (call) => call.country === 'de' && call.localization !== undefined,
+        ),
+      ).toEqual([]);
+    });
+
+    it('keeps the storefront default when the app declares only english', async () => {
+      registry.listings.set('de:default', {
+        ...POLISH_MYTHS,
+        languages: ['EN'],
+      });
+
+      const appId = await importFrom(DE_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      expect((await localizationItems(appId))[0].localization).toBe('de');
     });
   });
 });

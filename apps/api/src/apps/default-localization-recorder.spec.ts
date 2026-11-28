@@ -165,6 +165,38 @@ describe('DefaultLocalizationRecorder', () => {
     });
   });
 
+  it('records polish for a polish listing in germany without a probe', async () => {
+    const { recorder, update } = build();
+
+    await recorder.record({ ...APP, country: 'de' }, 'de', POLISH, {
+      changes: [],
+      listings: [],
+      probes: [],
+      complete: true,
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: APP.id },
+      data: { defaultLocalization: 'pl' },
+    });
+  });
+
+  it('clears polish in germany once the listing reads german', async () => {
+    const { recorder, update } = build();
+
+    await recorder.record(
+      { ...APP, country: 'de', defaultLocalization: 'pl' },
+      'de',
+      GERMAN,
+      { changes: [], listings: [], probes: [], complete: true },
+    );
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: APP.id },
+      data: { defaultLocalization: null },
+    });
+  });
+
   it.each([
     ['a market capture', APP, 'gb', captured()],
     ['a competitor', { ...APP, isCompetitor: true }, 'pl', captured()],

@@ -7,7 +7,9 @@ import {
   homeDefaultCandidates,
   type LocalizationProbe,
   provenHomeDefault,
+  SHARED_SCRIPT_LANGUAGES,
   suspectedHomeDefault,
+  unreadHomeDefault,
 } from './home-default';
 
 const POLISH_DESCRIPTION =
@@ -62,6 +64,40 @@ const CATALAN_DESCRIPTION =
 const JAPANESE_AND_ENGLISH_DESCRIPTION = `この日記アプリで成績と時間割をひとつの場所で確認できます。先生からの新しいお知らせもすぐに届きます。 ${ENGLISH_DESCRIPTION}`;
 
 const CHINESE_AND_ENGLISH_DESCRIPTION = `这是一款为学生和家长设计的日记应用，可以查看成绩和课程表。老师发来的新消息也会马上通知你。 ${ENGLISH_DESCRIPTION}`;
+
+const RUSSIAN_DESCRIPTION =
+  'Дневник это приложение для учеников и родителей. Смотрите оценки, посещаемость и расписание уроков в одном месте. Получайте уведомления о новых оценках и сообщениях от учителей. Приложение работает со школьным журналом и доступно для каждой школы, которая пользуется системой. Все ваши данные в безопасности, а вход простой и быстрый.';
+
+const BULGARIAN_DESCRIPTION =
+  'Това приложение помага на учениците и родителите да виждат всички оценки, присъствия и разписанието на едно място. Получавате известия за нови оценки и съобщения от учителите. Приложението работи с училищния дневник и е достъпно за всяко училище, което използва системата. Всичките ви данни са в безопасност, а влизането е лесно и бързо.';
+
+const MALAY_DESCRIPTION =
+  'Aplikasi ini membantu pelajar dan ibu bapa melihat semua markah, kehadiran dan jadual waktu di satu tempat. Anda akan menerima pemberitahuan tentang markah baharu dan mesej daripada guru. Aplikasi ini berfungsi dengan daftar sekolah dan tersedia untuk setiap sekolah yang menggunakan sistem ini. Semua data anda selamat dan log masuk adalah mudah dan pantas. Anda juga boleh menambah lebih daripada satu akaun dan bertukar antara akaun pada bila-bila masa.';
+
+const NORWEGIAN_DESCRIPTION =
+  'Hva blir neste? Etter hver økt får du mer innsikt uten reklame. Noen ganger blir det bare én økt før frokost, men hver økt teller. Både nybegynnere og eksperter trener mot nye mål gjennom hele året, fordi hver dag blir litt bedre enn før. Appen har blitt brukt av mange, og hvilken økt du velger etter jobb er helt opp til deg. Ingen abonnement, bare trening slik du vil ha det, nå og senere.';
+
+const NORWEGIAN_NEAR_DANISH_DESCRIPTION =
+  'Appen er til alle som vil træne med musik. Du kan se alle dine resultater og dele dem med venner. Der er ingen reklame, og det er gratis for alle. Når du har trænet, kan du se hvor langt du er nået, og hvem der er med. Ikke mere ventetid, bare træning.';
+
+const KOREAN_DESCRIPTION =
+  '이 앱은 학생과 부모가 모든 성적, 출석, 시간표를 한곳에서 볼 수 있도록 도와줍니다. 새로운 성적과 선생님의 메시지에 대한 알림을 받을 수 있습니다. 앱은 학교 기록부와 함께 작동하며 이 시스템을 사용하는 모든 학교에서 이용할 수 있습니다. 모든 데이터는 안전하며 로그인은 간단하고 빠릅니다.';
+
+const JAPANESE_DESCRIPTION =
+  'この日記アプリは生徒と保護者のためのアプリです。成績、出席、時間割をひとつの場所で確認できます。新しい成績や先生からのメッセージの通知を受け取れます。アプリは学校の記録と連携し、このシステムを使うすべての学校で利用できます。データはすべて安全で、ログインも簡単です。';
+
+const PORTUGUESE_DESCRIPTION =
+  'O diário é um aplicativo para os alunos e os seus pais. Veja as notas, a frequência e o horário das aulas em um só lugar. Receba um aviso das novas notas e das mensagens dos professores. O aplicativo funciona com o registro da escola e está aberto a cada escola que usa o sistema. Todos os seus dados estão seguros e o acesso é simples e rápido.';
+
+const ARABIC_DESCRIPTION =
+  'هذا التطبيق يساعد الطلاب وأولياء الأمور على رؤية جميع الدرجات والحضور والجدول في مكان واحد. ستتلقى إشعارات بالدرجات الجديدة ورسائل المعلمين. يعمل التطبيق مع سجل المدرسة وهو متاح لكل مدرسة تستخدم النظام. جميع بياناتك آمنة وتسجيل الدخول سهل وسريع.';
+
+const HINDI_DESCRIPTION =
+  'यह ऐप छात्रों और माता-पिता को एक ही जगह पर सभी अंक, उपस्थिति और समय सारणी देखने में मदद करता है। आपको नए अंकों और शिक्षकों के संदेशों की सूचना मिलती है। यह ऐप स्कूल के रजिस्टर के साथ काम करता है और हर उस स्कूल के लिए उपलब्ध है जो इस प्रणाली का उपयोग करता है। आपका सारा डेटा सुरक्षित है और लॉग इन करना आसान और तेज़ है।';
+
+const POLISH_WITH_KANA_DESCRIPTION = `${POLISH_DESCRIPTION} 日記アプリで成績と時間割を確認できます。先生からの新しいお知らせもすぐに届きます。`;
+
+const POLISH_AND_GERMAN_DESCRIPTION = `${POLISH_DESCRIPTION} ${LONG_GERMAN_DESCRIPTION} ${GERMAN_DESCRIPTION}`;
 
 const echoed = (...tags: AppStoreLocalization[]): LocalizationProbe[] =>
   tags.map((localization) => ({ localization, echoed: true }));
@@ -442,14 +478,14 @@ describe('provenHomeDefault in a storefront whose default is not english', () =>
       null,
     ],
     [
-      'never proves a language the storefront does not read',
+      'proves a language the storefront does not read from the text alone',
       {
         home: 'de',
         description: POLISH_DESCRIPTION,
         probes: echoed('en-GB'),
         declared: ['PL'],
       },
-      null,
+      'pl',
     ],
     [
       'never decides on an empty description',
@@ -545,5 +581,118 @@ describe('suspectedHomeDefault', () => {
         declared: ['HU'],
       }),
     ).toBeNull();
+  });
+});
+
+describe('a language the home storefront does not read', () => {
+  const unread = (home: string, description: string, declared: string[]) =>
+    proof({ home, description, declared });
+
+  it.each([
+    ['polish in de declared PL', 'de', POLISH_DESCRIPTION, ['PL'], 'pl'],
+    [
+      'polish in de declared PL, EN',
+      'de',
+      POLISH_DESCRIPTION,
+      ['PL', 'EN'],
+      'pl',
+    ],
+    [
+      'polish in de declared PL, EN, DE',
+      'de',
+      POLISH_DESCRIPTION,
+      ['PL', 'EN', 'DE'],
+      null,
+    ],
+    [
+      'slovak in de declared CS, SK',
+      'de',
+      SLOVAK_DESCRIPTION,
+      ['CS', 'SK'],
+      null,
+    ],
+    [
+      'malay in de declared ID, MS',
+      'de',
+      MALAY_DESCRIPTION,
+      ['ID', 'MS'],
+      null,
+    ],
+    [
+      'bulgarian in de declared RU, BG',
+      'de',
+      BULGARIAN_DESCRIPTION,
+      ['RU', 'BG'],
+      null,
+    ],
+    [
+      'norwegian within a hit of danish in de declared NO',
+      'de',
+      NORWEGIAN_NEAR_DANISH_DESCRIPTION,
+      ['NO'],
+      null,
+    ],
+    ['norwegian in de declared NB', 'de', NORWEGIAN_DESCRIPTION, ['NB'], 'no'],
+    ['polish in de declared EN', 'de', POLISH_DESCRIPTION, ['EN'], null],
+    ['polish in de declared nothing', 'de', POLISH_DESCRIPTION, [], null],
+    [
+      'polish under twice the german in de declared PL, DE',
+      'de',
+      POLISH_AND_GERMAN_DESCRIPTION,
+      ['PL', 'DE'],
+      null,
+    ],
+    ['russian in fr declared RU', 'fr', RUSSIAN_DESCRIPTION, ['RU'], 'ru'],
+    ['ukrainian in fr declared UK', 'fr', UKRAINIAN_DESCRIPTION, ['UK'], 'uk'],
+    ['korean in de declared KO', 'de', KOREAN_DESCRIPTION, ['KO'], 'ko'],
+    ['japanese in de declared JA', 'de', JAPANESE_DESCRIPTION, ['JA'], 'ja'],
+    ['chinese in de declared ZH', 'de', CHINESE_DESCRIPTION, ['ZH'], null],
+    ['spanish in de declared ES', 'de', SPANISH_DESCRIPTION, ['ES'], null],
+    ['french in de declared FR', 'de', FRENCH_DESCRIPTION, ['FR'], null],
+    [
+      'portuguese in de declared PT',
+      'de',
+      PORTUGUESE_DESCRIPTION,
+      ['PT'],
+      null,
+    ],
+    ['arabic in de declared AR', 'de', ARABIC_DESCRIPTION, ['AR'], null],
+    ['hindi in de declared HI', 'de', HINDI_DESCRIPTION, ['HI'], null],
+    [
+      'polish with kana in jp declared PL',
+      'jp',
+      POLISH_WITH_KANA_DESCRIPTION,
+      ['PL'],
+      null,
+    ],
+    ['german in us declared DE', 'us', LONG_GERMAN_DESCRIPTION, ['DE'], 'de'],
+    ['catalan in es declared CA', 'es', CATALAN_DESCRIPTION, ['CA'], null],
+  ] as const)(
+    '%s answers %s',
+    (_case, home, description, declared, expected) => {
+      expect(unread(home, description, [...declared])).toBe(expected);
+    },
+  );
+
+  it('still proves polish in poland through the echo of its probe', () => {
+    expect(
+      proof({
+        home: 'pl',
+        description: POLISH_DESCRIPTION,
+        probes: echoed('pl'),
+        declared: ['PL'],
+      }),
+    ).toBe('pl');
+    expect(
+      unreadHomeDefault({
+        home: 'pl',
+        description: POLISH_DESCRIPTION,
+        declared: ['PL'],
+      }),
+    ).toBeNull();
+  });
+
+  it('pins the languages whose script another app store language shares', () => {
+    expect([...SHARED_SCRIPT_LANGUAGES]).toEqual(['ar', 'hi']);
   });
 });

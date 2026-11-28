@@ -57,6 +57,12 @@ export const POLISH_ONLY: Listing = {
   languages: ['PL'],
 };
 
+export const POLISH_MYTHS: Listing = {
+  ...POLISH_ONLY,
+  title: 'Mit Słowiański',
+  subtitle: 'Bogowie i legendy',
+};
+
 export const ENGLISH_ONLY: Listing = {
   title: 'School Diary',
   subtitle: 'Grades and timetable',
