@@ -23,7 +23,7 @@
   </p>
 </div>
 
-<a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme"><img src="docs/images/readme/dashboard.png" alt="AsoBeast dashboard: App Store and Google Play search visibility over 90 days, keyword movers and the next ASO actions" width="100%" /></a>
+<a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme"><img src="docs/images/readme/hero.gif" alt="See your visibility climb: the AsoBeast app overview switching between its visibility, share of voice, keywords in top 10 and rating charts, each rising over 90 days" width="100%" /></a>
 
 ## What is AsoBeast?
 
@@ -82,7 +82,14 @@ Ask the agent which keywords dropped this week, which competitor entered the top
 
 ## Features
 
-<a href="https://docs.asobeast.com/guides/track-keywords"><img src="docs/images/readme/keywords.png" alt="AsoBeast keyword rank tracker: daily positions, 7-day trends, popularity, difficulty and the top-ranking apps per keyword" width="100%" /></a>
+<p align="center">
+  <a href="https://docs.asobeast.com/guides/read-rankings"><img src="docs/images/readme/rankings.gif" alt="Track every keyword to #200: the keyword positions chart switching between 7, 30 and 90 days, with a tooltip along four climbing keywords" width="49%" /></a>
+  <a href="https://docs.asobeast.com/guides/listing-changes"><img src="docs/images/readme/changes.gif" alt="See what each change did: visibility up 0.6 after 7 days, 3.0 after 14 days and 6.6 after 28 days for one listing update" width="49%" /></a>
+</p>
+<p align="center">
+  <a href="https://docs.asobeast.com/guides/track-keywords"><img src="docs/images/readme/keyword.gif" alt="Every keyword's history: opening a keyword shows its opportunity, popularity, difficulty and 90 day position history" width="49%" /></a>
+  <a href="https://docs.asobeast.com/mcp/introduction"><img src="docs/images/readme/mcp.gif" alt="Ask Claude Code over MCP: Claude Code answers how an app did in the 28 days after its Oct 27 update, using the AsoBeast MCP server" width="49%" /></a>
+</p>
 
 - Import any App Store or Google Play URL once and [track its keywords](https://docs.asobeast.com/guides/track-keywords) daily in as many countries as you need. Setup suggests markets from the languages your listing ships.
 - [Rank checks](https://docs.asobeast.com/concepts/positions) read as deep as each store lists, up to 200: the App Store usually returns 140 to 200 results and Google Play about 30. One search per keyword covers your app and every competitor.
