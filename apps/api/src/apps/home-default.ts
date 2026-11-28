@@ -2,6 +2,7 @@ import {
   APP_STORE_LOCALIZATION_IDS,
   type AppStoreLocalization,
   declaredLanguage,
+  keywordFieldLocalizations,
   localizationLanguage,
   nativeLocalizations,
   readLocalizations,
@@ -11,6 +12,8 @@ import {
   languageEvidence,
   type LanguageEvidence,
 } from '../common/text-language';
+import type { ConsoleListing } from './console-listing';
+import { descriptionFingerprint } from './description-fingerprint';
 
 export const DEFAULT_MIN_HITS = 6;
 export const DEFAULT_OVER_PRIMARY = 2;
@@ -37,6 +40,7 @@ export interface HomeListingText {
 
 export interface HomeDefaultProof extends HomeListingText {
   probes: readonly LocalizationProbe[];
+  consoleListing: ConsoleListing | null;
 }
 
 const languageOf = (tag: AppStoreLocalization): string =>
@@ -127,6 +131,24 @@ export function unreadHomeDefault(
   return onlyLocalizationOf(language);
 }
 
+export function consoleHomeDefault(
+  home: string,
+  description: string,
+  listing: ConsoleListing | null,
+): AppStoreLocalization | null {
+  if (listing === null) return null;
+  const print = descriptionFingerprint(description);
+  const matches = [...listing.fingerprints]
+    .filter(([, fingerprint]) => fingerprint === print)
+    .map(([localization]) => localization);
+  if (matches.length < 2) return matches[0] ?? null;
+  const read = readLocalizations(home).find((tag) => matches.includes(tag));
+  if (read !== undefined) return read;
+  return listing.primary !== null && matches.includes(listing.primary)
+    ? listing.primary
+    : null;
+}
+
 function unlistedNative(
   natives: readonly AppStoreLocalization[],
   candidates: readonly AppStoreLocalization[],
@@ -148,6 +170,14 @@ function unlistedNative(
 export function provenHomeDefault(
   proof: HomeDefaultProof,
 ): AppStoreLocalization | null {
+  const named = consoleHomeDefault(
+    proof.home,
+    proof.description,
+    proof.consoleListing,
+  );
+  if (named !== null) {
+    return named === keywordFieldLocalizations(proof.home)[0] ? null : named;
+  }
   const echoed = (tag: AppStoreLocalization): boolean =>
     proof.probes.some((probe) => probe.localization === tag && probe.echoed);
   const suspect = suspectedHomeDefault(proof);

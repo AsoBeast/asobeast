@@ -1,10 +1,11 @@
-import type { AscRequester } from './asc-requester';
+import { type AscRequester, createdResource } from './asc-requester';
 import { ASC_PAGE_SIZE } from './asc-analytics-api';
 
 export interface AscAppVersionLocalization {
   locale: string;
   keywords: string;
   promotionalText: string | null;
+  description: string | null;
 }
 
 export interface AscLiveVersion {
@@ -59,8 +60,9 @@ export class AscListingApi {
       locale?: string;
       keywords?: string;
       promotionalText?: string;
+      description?: string;
     }>(
-      `/v1/appStoreVersions/${encodeURIComponent(versionId)}/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords,promotionalText&limit=${ASC_PAGE_SIZE}`,
+      `/v1/appStoreVersions/${encodeURIComponent(versionId)}/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords,promotionalText,description&limit=${ASC_PAGE_SIZE}`,
     );
     return resources.flatMap(({ attributes }) =>
       attributes?.locale
@@ -69,10 +71,24 @@ export class AscListingApi {
               locale: attributes.locale,
               keywords: attributes.keywords ?? '',
               promotionalText: attributes.promotionalText ?? null,
+              description: attributes.description ?? null,
             },
           ]
         : [],
     );
+  }
+
+  async primaryLocale(appId: string): Promise<string | null> {
+    const response = await this.requester.send({
+      method: 'GET',
+      path: `/v1/apps/${encodeURIComponent(appId)}?fields[apps]=primaryLocale`,
+    });
+    const { attributes } = createdResource<{ primaryLocale?: unknown }>(
+      response,
+    );
+    return typeof attributes?.primaryLocale === 'string'
+      ? attributes.primaryLocale
+      : null;
   }
 
   async nominations(

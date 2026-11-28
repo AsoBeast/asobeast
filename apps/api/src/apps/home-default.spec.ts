@@ -11,6 +11,8 @@ import {
   suspectedHomeDefault,
   unreadHomeDefault,
 } from './home-default';
+import type { ConsoleListing } from './console-listing';
+import { descriptionFingerprint } from './description-fingerprint';
 
 const POLISH_DESCRIPTION =
   'Dzienniczek to aplikacja dla uczniów i rodziców. Sprawdzaj oceny, frekwencję i plan lekcji w jednym miejscu. Otrzymuj powiadomienia o nowych ocenach oraz wiadomościach od nauczycieli. Aplikacja działa z dziennikiem szkolnym i jest dostępna dla każdej szkoły, która korzysta z systemu. Wszystkie dane są bezpieczne, a logowanie jest proste i szybkie. Możesz też dodać kilka kont i przełączać się między nimi bez wylogowania.';
@@ -107,10 +109,17 @@ interface Proof {
   description: string;
   probes?: LocalizationProbe[];
   declared?: string[];
+  consoleListing?: ConsoleListing | null;
 }
 
-const proof = ({ home, description, probes = [], declared = [] }: Proof) =>
-  provenHomeDefault({ home, description, probes, declared });
+const proof = ({
+  home,
+  description,
+  probes = [],
+  declared = [],
+  consoleListing = null,
+}: Proof) =>
+  provenHomeDefault({ home, description, probes, declared, consoleListing });
 
 describe('provenHomeDefault', () => {
   it('proves a polish default listing in poland', () => {
@@ -585,92 +594,181 @@ describe('suspectedHomeDefault', () => {
 });
 
 describe('a language the home storefront does not read', () => {
-  const unread = (home: string, description: string, declared: string[]) =>
-    proof({ home, description, declared });
-
   it.each([
-    ['polish in de declared PL', 'de', POLISH_DESCRIPTION, ['PL'], 'pl'],
-    [
-      'polish in de declared PL, EN',
-      'de',
-      POLISH_DESCRIPTION,
-      ['PL', 'EN'],
-      'pl',
-    ],
-    [
-      'polish in de declared PL, EN, DE',
-      'de',
-      POLISH_DESCRIPTION,
-      ['PL', 'EN', 'DE'],
-      null,
-    ],
-    [
-      'slovak in de declared CS, SK',
-      'de',
-      SLOVAK_DESCRIPTION,
-      ['CS', 'SK'],
-      null,
-    ],
-    [
-      'malay in de declared ID, MS',
-      'de',
-      MALAY_DESCRIPTION,
-      ['ID', 'MS'],
-      null,
-    ],
-    [
-      'bulgarian in de declared RU, BG',
-      'de',
-      BULGARIAN_DESCRIPTION,
-      ['RU', 'BG'],
-      null,
-    ],
-    [
-      'norwegian within a hit of danish in de declared NO',
-      'de',
-      NORWEGIAN_NEAR_DANISH_DESCRIPTION,
-      ['NO'],
-      null,
-    ],
-    ['norwegian in de declared NB', 'de', NORWEGIAN_DESCRIPTION, ['NB'], 'no'],
-    ['polish in de declared EN', 'de', POLISH_DESCRIPTION, ['EN'], null],
-    ['polish in de declared nothing', 'de', POLISH_DESCRIPTION, [], null],
-    [
-      'polish under twice the german in de declared PL, DE',
-      'de',
-      POLISH_AND_GERMAN_DESCRIPTION,
-      ['PL', 'DE'],
-      null,
-    ],
-    ['russian in fr declared RU', 'fr', RUSSIAN_DESCRIPTION, ['RU'], 'ru'],
-    ['ukrainian in fr declared UK', 'fr', UKRAINIAN_DESCRIPTION, ['UK'], 'uk'],
-    ['korean in de declared KO', 'de', KOREAN_DESCRIPTION, ['KO'], 'ko'],
-    ['japanese in de declared JA', 'de', JAPANESE_DESCRIPTION, ['JA'], 'ja'],
-    ['chinese in de declared ZH', 'de', CHINESE_DESCRIPTION, ['ZH'], null],
-    ['spanish in de declared ES', 'de', SPANISH_DESCRIPTION, ['ES'], null],
-    ['french in de declared FR', 'de', FRENCH_DESCRIPTION, ['FR'], null],
-    [
-      'portuguese in de declared PT',
-      'de',
-      PORTUGUESE_DESCRIPTION,
-      ['PT'],
-      null,
-    ],
-    ['arabic in de declared AR', 'de', ARABIC_DESCRIPTION, ['AR'], null],
-    ['hindi in de declared HI', 'de', HINDI_DESCRIPTION, ['HI'], null],
-    [
-      'polish with kana in jp declared PL',
-      'jp',
-      POLISH_WITH_KANA_DESCRIPTION,
-      ['PL'],
-      null,
-    ],
-    ['german in us declared DE', 'us', LONG_GERMAN_DESCRIPTION, ['DE'], 'de'],
-    ['catalan in es declared CA', 'es', CATALAN_DESCRIPTION, ['CA'], null],
-  ] as const)(
-    '%s answers %s',
-    (_case, home, description, declared, expected) => {
-      expect(unread(home, description, [...declared])).toBe(expected);
+    {
+      label: 'polish in de declared PL',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['PL'],
+      expected: 'pl',
+    },
+    {
+      label: 'polish in de declared PL, EN',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['PL', 'EN'],
+      expected: 'pl',
+    },
+    {
+      label: 'polish in de declared PL, EN, DE',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['PL', 'EN', 'DE'],
+      expected: null,
+    },
+    {
+      label: 'slovak in de declared CS, SK',
+      home: 'de',
+      description: SLOVAK_DESCRIPTION,
+      declared: ['CS', 'SK'],
+      expected: null,
+    },
+    {
+      label: 'malay in de declared ID, MS',
+      home: 'de',
+      description: MALAY_DESCRIPTION,
+      declared: ['ID', 'MS'],
+      expected: null,
+    },
+    {
+      label: 'bulgarian in de declared RU, BG',
+      home: 'de',
+      description: BULGARIAN_DESCRIPTION,
+      declared: ['RU', 'BG'],
+      expected: null,
+    },
+    {
+      label: 'norwegian within a hit of danish in de declared NO',
+      home: 'de',
+      description: NORWEGIAN_NEAR_DANISH_DESCRIPTION,
+      declared: ['NO'],
+      expected: null,
+    },
+    {
+      label: 'norwegian in de declared NB',
+      home: 'de',
+      description: NORWEGIAN_DESCRIPTION,
+      declared: ['NB'],
+      expected: 'no',
+    },
+    {
+      label: 'polish in de declared EN',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['EN'],
+      expected: null,
+    },
+    {
+      label: 'polish in de declared nothing',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: [],
+      expected: null,
+    },
+    {
+      label: 'polish under twice the german in de declared PL, DE',
+      home: 'de',
+      description: POLISH_AND_GERMAN_DESCRIPTION,
+      declared: ['PL', 'DE'],
+      expected: null,
+    },
+    {
+      label: 'russian in fr declared RU',
+      home: 'fr',
+      description: RUSSIAN_DESCRIPTION,
+      declared: ['RU'],
+      expected: 'ru',
+    },
+    {
+      label: 'ukrainian in fr declared UK',
+      home: 'fr',
+      description: UKRAINIAN_DESCRIPTION,
+      declared: ['UK'],
+      expected: 'uk',
+    },
+    {
+      label: 'korean in de declared KO',
+      home: 'de',
+      description: KOREAN_DESCRIPTION,
+      declared: ['KO'],
+      expected: 'ko',
+    },
+    {
+      label: 'japanese in de declared JA',
+      home: 'de',
+      description: JAPANESE_DESCRIPTION,
+      declared: ['JA'],
+      expected: 'ja',
+    },
+    {
+      label: 'chinese in de declared ZH',
+      home: 'de',
+      description: CHINESE_DESCRIPTION,
+      declared: ['ZH'],
+      expected: null,
+    },
+    {
+      label: 'spanish in de declared ES',
+      home: 'de',
+      description: SPANISH_DESCRIPTION,
+      declared: ['ES'],
+      expected: null,
+    },
+    {
+      label: 'french in de declared FR',
+      home: 'de',
+      description: FRENCH_DESCRIPTION,
+      declared: ['FR'],
+      expected: null,
+    },
+    {
+      label: 'portuguese in de declared PT',
+      home: 'de',
+      description: PORTUGUESE_DESCRIPTION,
+      declared: ['PT'],
+      expected: null,
+    },
+    {
+      label: 'arabic in de declared AR',
+      home: 'de',
+      description: ARABIC_DESCRIPTION,
+      declared: ['AR'],
+      expected: null,
+    },
+    {
+      label: 'hindi in de declared HI',
+      home: 'de',
+      description: HINDI_DESCRIPTION,
+      declared: ['HI'],
+      expected: null,
+    },
+    {
+      label: 'polish with kana in jp declared PL',
+      home: 'jp',
+      description: POLISH_WITH_KANA_DESCRIPTION,
+      declared: ['PL'],
+      expected: null,
+    },
+    {
+      label: 'german in us declared DE',
+      home: 'us',
+      description: LONG_GERMAN_DESCRIPTION,
+      declared: ['DE'],
+      expected: 'de',
+    },
+    {
+      label: 'catalan in es declared CA',
+      home: 'es',
+      description: CATALAN_DESCRIPTION,
+      declared: ['CA'],
+      expected: null,
+    },
+  ])(
+    '$label answers $expected',
+    ({ home, description, declared, expected }) => {
+      expect(proof({ home, description, declared: [...declared] })).toBe(
+        expected,
+      );
     },
   );
 
@@ -694,5 +792,127 @@ describe('a language the home storefront does not read', () => {
 
   it('pins the languages whose script another app store language shares', () => {
     expect([...SHARED_SCRIPT_LANGUAGES]).toEqual(['ar', 'hi']);
+  });
+});
+
+describe('the console proof', () => {
+  const OTHER = 'Organise your family week, chores and rota in one place.';
+
+  const listing = (
+    matching: AppStoreLocalization[],
+    primary: AppStoreLocalization | null,
+    description = ENGLISH_DESCRIPTION,
+    others: AppStoreLocalization[] = [],
+  ): ConsoleListing => ({
+    version: '1.9',
+    primary,
+    fingerprints: new Map([
+      ...matching.map(
+        (tag) => [tag, descriptionFingerprint(description)] as const,
+      ),
+      ...others.map((tag) => [tag, descriptionFingerprint(OTHER)] as const),
+    ]),
+  });
+
+  it.each([
+    [
+      'names the one matching localization',
+      {
+        home: 'de',
+        consoleListing: listing(['en-US'], 'en-US', ENGLISH_DESCRIPTION, [
+          'en-GB',
+        ]),
+      },
+      'en-US',
+    ],
+    [
+      'wins over the listed suspect and its echo',
+      {
+        home: 'de',
+        probes: echoed('en-GB'),
+        declared: ['EN'],
+        consoleListing: listing(['en-US'], 'en-US'),
+      },
+      'en-US',
+    ],
+    [
+      'takes the tag the storefront reads on a tie',
+      { home: 'de', consoleListing: listing(['en-US', 'en-GB'], 'en-US') },
+      'en-GB',
+    ],
+    [
+      'takes the primary on a tie the storefront does not read',
+      { home: 'de', consoleListing: listing(['en-US', 'en-AU'], 'en-AU') },
+      'en-AU',
+    ],
+    [
+      'falls through on a tie without the primary',
+      { home: 'de', consoleListing: listing(['en-US', 'en-AU'], 'fr-CA') },
+      null,
+    ],
+    [
+      'falls through on a tie without a primary',
+      { home: 'de', consoleListing: listing(['en-US', 'en-AU'], null) },
+      null,
+    ],
+    [
+      'keeps the column null for the storefront primary',
+      { home: 'de', consoleListing: listing(['de'], 'en-US') },
+      null,
+    ],
+    [
+      'falls through without a match',
+      {
+        home: 'de',
+        consoleListing: listing([], 'en-US', ENGLISH_DESCRIPTION, ['en-US']),
+      },
+      null,
+    ],
+  ] as const)('%s', (_case, input, expected) => {
+    expect(proof({ description: ENGLISH_DESCRIPTION, ...input })).toBe(
+      expected,
+    );
+  });
+
+  it('falls through to the public proof without a match', () => {
+    expect(
+      proof({
+        home: 'de',
+        description: ENGLISH_DESCRIPTION,
+        probes: echoed('en-GB'),
+        declared: ['EN'],
+        consoleListing: listing([], 'en-US', ENGLISH_DESCRIPTION, ['en-US']),
+      }),
+    ).toBe('en-GB');
+  });
+
+  it('names a polish localization in germany and in poland', () => {
+    const polish = listing(['pl'], 'pl', POLISH_DESCRIPTION);
+
+    expect(
+      proof({
+        home: 'de',
+        description: POLISH_DESCRIPTION,
+        consoleListing: polish,
+      }),
+    ).toBe('pl');
+    expect(
+      proof({
+        home: 'pl',
+        description: POLISH_DESCRIPTION,
+        consoleListing: polish,
+      }),
+    ).toBe('pl');
+  });
+
+  it('answers what the public proof answers without a console listing', () => {
+    expect(
+      proof({
+        home: 'de',
+        description: ENGLISH_DESCRIPTION,
+        probes: echoed('en-GB'),
+        declared: ['EN'],
+      }),
+    ).toBe('en-GB');
   });
 });

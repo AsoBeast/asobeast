@@ -22,6 +22,7 @@ const APP = {
   store: Store.APP_STORE,
   storeAppId: '1234567890',
   country: 'us',
+  defaultLocalization: null,
   iconUrl: null,
   isCompetitor: false,
   unlistedMarkets: [] as string[],
@@ -170,7 +171,7 @@ const build = (overrides: {
   const recordDefault =
     overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
   const recordHomeDefault =
-    overrides.recordHomeDefault ?? jest.fn().mockResolvedValue(undefined);
+    overrides.recordHomeDefault ?? jest.fn().mockResolvedValue(null);
   const storeReports = { enqueue: jest.fn().mockResolvedValue({}) };
   const recordRatingDrop = jest.fn().mockResolvedValue(undefined);
   const recordLoss = jest.fn().mockResolvedValue(undefined);
@@ -228,6 +229,42 @@ describe('ListingCaptureService.refresh', () => {
     await service.refresh(APP.id);
 
     expect(storeReports.enqueue).toHaveBeenCalledWith('ws_1', Store.APP_STORE);
+  });
+
+  it('enqueues the store sync once when the home capture changes the home localization of a following app', async () => {
+    const { service, storeReports } = build({
+      recordHomeDefault: jest.fn().mockResolvedValue('en-US'),
+      recordRefresh: jest
+        .fn()
+        .mockResolvedValue([{ field: 'version', before: '1.0', after: '2.0' }]),
+      fieldSyncRow: { syncedAt: new Date() },
+    });
+
+    await service.refresh(APP.id);
+
+    expect(storeReports.enqueue).toHaveBeenCalledTimes(1);
+    expect(storeReports.enqueue).toHaveBeenCalledWith('ws_1', Store.APP_STORE);
+  });
+
+  it('enqueues the store sync when only the home localization changed', async () => {
+    const { service, storeReports } = build({
+      recordHomeDefault: jest.fn().mockResolvedValue('en-US'),
+      fieldSyncRow: { syncedAt: new Date() },
+    });
+
+    await service.refresh(APP.id);
+
+    expect(storeReports.enqueue).toHaveBeenCalledWith('ws_1', Store.APP_STORE);
+  });
+
+  it('enqueues nothing when the home localization changed for an app without an import mark', async () => {
+    const { service, storeReports } = build({
+      recordHomeDefault: jest.fn().mockResolvedValue('en-US'),
+    });
+
+    await service.refresh(APP.id);
+
+    expect(storeReports.enqueue).not.toHaveBeenCalled();
   });
 
   it('enqueues nothing for a home capture without an import mark', async () => {

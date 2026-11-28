@@ -16,7 +16,8 @@ import {
   FIELD_SYNC_QUOTA_STOPPED,
   FIELD_SYNC_UNSERVED_APP,
 } from './asc-keyword-field-sync.service';
-import { AscError } from './asc-errors';
+import { AscError, AscRateLimitedError } from './asc-errors';
+import { descriptionFingerprint } from '../apps/description-fingerprint';
 
 const APP = {
   id: 'app_1',
@@ -44,7 +45,8 @@ interface BuildOptions {
   apps?: Record<string, KeywordAppRow | undefined>;
   stored?: { localization: string; phrases: string[] }[];
   live?: { id: string; version: string } | null;
-  served?: { locale: string; keywords: string }[];
+  served?: { locale: string; keywords: string; description?: string }[];
+  primaryLocale?: jest.Mock;
   abroad?: string[];
   saveFailure?: QuotaExceededError | null;
   untracked?: boolean;
@@ -80,6 +82,8 @@ function build(options: BuildOptions = {}) {
   const api = {
     liveVersion: jest.fn().mockResolvedValue(live),
     versionLocalizations: jest.fn().mockResolvedValue(served),
+    primaryLocale:
+      options.primaryLocale ?? jest.fn().mockResolvedValue('en-US'),
   };
   const connections = {
     openAppStoreListing: jest
@@ -596,6 +600,92 @@ describe('AscKeywordFieldSync.run', () => {
       expect(writer.save).toHaveBeenCalledWith(
         expect.objectContaining({ localization: 'en-GB', phrases: [] }),
       );
+    });
+  });
+});
+
+describe('AscKeywordFieldSync console listing', () => {
+  const described = [
+    { locale: 'en-US', keywords: 'calendar,chores', description: 'Plan A.' },
+    { locale: 'en-GB', keywords: 'rota,chores', description: 'Plan B.' },
+    { locale: 'de-DE', keywords: 'kalender', description: '' },
+    { locale: 'xx-XX', keywords: 'unknown', description: 'Plan X.' },
+  ];
+
+  const lastRecord = (prisma: ReturnType<typeof build>['prisma']) =>
+    prisma.keywordFieldSync.updateMany.mock.calls.at(-1)?.[0].data;
+
+  it('stores the primary locale and a fingerprint per mapped localization with a description', async () => {
+    const { service, prisma } = build({
+      served: described,
+      primaryLocale: jest.fn().mockResolvedValue('en-US'),
+    });
+
+    await service.run();
+
+    expect(lastRecord(prisma)).toMatchObject({
+      version: '2.0',
+      primaryLocale: 'en-US',
+      descriptionFingerprints: {
+        'en-US': descriptionFingerprint('Plan A.'),
+        'en-GB': descriptionFingerprint('Plan B.'),
+      },
+    });
+  });
+
+  it('maps the primary locale to its app store tag', async () => {
+    const { service, prisma } = build({
+      primaryLocale: jest.fn().mockResolvedValue('de-DE'),
+    });
+
+    await service.run();
+
+    expect(lastRecord(prisma)).toMatchObject({ primaryLocale: 'de' });
+  });
+
+  it.each([
+    ['a refused read', new AscError('forbidden', 403, null)],
+    ['a failed read', new Error('socket hang up')],
+  ])(
+    'keeps the import and stores no primary locale after %s',
+    async (_case, failure) => {
+      const { service, prisma, writer } = build({
+        served: described.slice(0, 1),
+        primaryLocale: jest.fn().mockRejectedValue(failure),
+      });
+
+      await service.run();
+
+      expect(writer.save).toHaveBeenCalled();
+      expect(lastRecord(prisma)).toMatchObject({
+        primaryLocale: null,
+        descriptionFingerprints: {
+          'en-US': descriptionFingerprint('Plan A.'),
+        },
+      });
+    },
+  );
+
+  it('stops the run on a rate limited primary locale read', async () => {
+    const { service } = build({
+      primaryLocale: jest
+        .fn()
+        .mockRejectedValue(new AscRateLimitedError('slow down', 429, null)),
+    });
+
+    await expect(service.run()).rejects.toBeInstanceOf(AscRateLimitedError);
+  });
+
+  it('stores the fingerprints when the import stops at the quota', async () => {
+    const { service, prisma } = build({
+      served: described.slice(0, 1),
+      saveFailure: quotaRefusal(),
+    });
+
+    await service.run();
+
+    expect(lastRecord(prisma)).toMatchObject({
+      descriptionFingerprints: { 'en-US': descriptionFingerprint('Plan A.') },
     });
   });
 });

@@ -115,6 +115,7 @@ describe('AscListingApi.versionLocalizations', () => {
               locale: 'en-US',
               keywords: 'focus,timer',
               promotionalText: 'Two weeks of focus.',
+              description: 'Focus in short sessions.',
             },
           },
           {
@@ -132,11 +133,17 @@ describe('AscListingApi.versionLocalizations', () => {
         locale: 'en-US',
         keywords: 'focus,timer',
         promotionalText: 'Two weeks of focus.',
+        description: 'Focus in short sessions.',
       },
-      { locale: 'de-DE', keywords: 'fokus', promotionalText: null },
+      {
+        locale: 'de-DE',
+        keywords: 'fokus',
+        promotionalText: null,
+        description: null,
+      },
     ]);
     expect(requests[0].path).toBe(
-      '/v1/appStoreVersions/900/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords,promotionalText&limit=200',
+      '/v1/appStoreVersions/900/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords,promotionalText,description&limit=200',
     );
   });
 
@@ -144,8 +151,40 @@ describe('AscListingApi.versionLocalizations', () => {
     const { api } = recorded(localizations(['empty']));
 
     await expect(api.versionLocalizations('900')).resolves.toEqual([
-      { locale: 'empty', keywords: '', promotionalText: null },
+      {
+        locale: 'empty',
+        keywords: '',
+        promotionalText: null,
+        description: null,
+      },
     ]);
+  });
+});
+
+describe('AscListingApi.primaryLocale', () => {
+  it('reads the primary locale of the app', async () => {
+    const { api, requests } = recorded(
+      ok({
+        data: {
+          id: '1476097583',
+          type: 'apps',
+          attributes: { primaryLocale: 'en-US' },
+        },
+      }),
+    );
+
+    await expect(api.primaryLocale('1476097583')).resolves.toBe('en-US');
+    expect(requests[0].path).toBe(
+      '/v1/apps/1476097583?fields[apps]=primaryLocale',
+    );
+  });
+
+  it('answers null when the app carries no primary locale', async () => {
+    const { api } = recorded(
+      ok({ data: { id: '1476097583', type: 'apps', attributes: {} } }),
+    );
+
+    await expect(api.primaryLocale('1476097583')).resolves.toBeNull();
   });
 });
 

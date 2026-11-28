@@ -24,6 +24,11 @@ import {
   FieldWriteSupersededError,
   KeywordFieldWriter,
 } from '../keywords/keyword-field-writer';
+import {
+  type ConsoleListingRecord,
+  descriptionFingerprintsOf,
+  primaryLocalizationOf,
+} from './asc-console-listing';
 import { AscError, AscRateLimitedError, isNotFound } from './asc-errors';
 import { localizationOfAscLocale } from './asc-locales';
 import type {
@@ -191,6 +196,10 @@ export class AscKeywordFieldSync {
     if (!live) return untouchedOutcome;
     const served = await this.versionLocalizations(api, app, live.id);
     if (served === null) return untouchedOutcome;
+    const consoleListing: ConsoleListingRecord = {
+      primaryLocale: await this.primaryLocale(api, app),
+      descriptionFingerprints: descriptionFingerprintsOf(served),
+    };
 
     const stored = new Map<AppStoreLocalization, string[]>(
       (await storedKeywordFields(this.prisma, app.id)).flatMap((field) =>
@@ -222,7 +231,7 @@ export class AscKeywordFieldSync {
       if (removed === null) return partialOutcome(outcome);
       outcome.changed += removed;
     }
-    await this.recordSync(app, live.version, outcome.stoppedAt);
+    await this.recordSync(app, live.version, outcome.stoppedAt, consoleListing);
     return {
       fields: outcome.fields,
       changed: outcome.changed,
@@ -339,6 +348,23 @@ export class AscKeywordFieldSync {
     }
   }
 
+  private async primaryLocale(
+    api: AscListingApi,
+    app: KeywordApp,
+  ): Promise<string | null> {
+    try {
+      return primaryLocalizationOf(await api.primaryLocale(app.storeAppId));
+    } catch (error) {
+      if (error instanceof AscRateLimitedError) throw error;
+      this.logger.warn(
+        `the primary locale of app ${app.id} waits for the next sync: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
+  }
+
   private async skipped(error: unknown, app: KeywordApp): Promise<void> {
     if (error instanceof AscRateLimitedError) throw error;
     if (!(error instanceof AscError)) throw error;
@@ -389,10 +415,12 @@ export class AscKeywordFieldSync {
     app: KeywordApp,
     version: string | null,
     stoppedAt: AppStoreLocalization | null,
+    consoleListing: ConsoleListingRecord,
   ): Promise<unknown> {
     return this.prisma.keywordFieldSync.updateMany({
       where: { appId: app.id },
       data: {
+        ...consoleListing,
         version,
         syncedAt: new Date(),
         lastError:

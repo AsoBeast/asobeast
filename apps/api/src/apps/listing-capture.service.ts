@@ -185,7 +185,12 @@ export class ListingCaptureService {
     };
     const localized = await this.localizations.capture(app, market, listing);
     await this.recorder.record(app, market, listing, localized);
-    await this.defaults.record(app, market, listing, localized);
+    const defaultLocalization = await this.defaults.record(
+      app,
+      market,
+      listing,
+      localized,
+    );
     if (
       !home &&
       !previous &&
@@ -196,7 +201,7 @@ export class ListingCaptureService {
     }
     if (home) {
       await this.keywords.syncFromLaterSnapshot(app.id);
-      if (await this.releaseChangedFields(app, recorded)) {
+      if (await this.fieldsNeedImport(app, recorded, defaultLocalization)) {
         try {
           await this.storeReports.enqueue(app.workspaceId, app.store);
         } catch (error: unknown) {
@@ -274,12 +279,15 @@ export class ListingCaptureService {
     });
   }
 
-  private async releaseChangedFields(
+  private async fieldsNeedImport(
     app: App,
     recorded: DetectedChange[],
+    defaultLocalization: string | null,
   ): Promise<boolean> {
     if (app.store !== Store.APP_STORE || app.isCompetitor) return false;
-    if (!recorded.some(({ field }) => field === 'version')) return false;
+    const released = recorded.some(({ field }) => field === 'version');
+    const renamed = defaultLocalization !== app.defaultLocalization;
+    if (!released && !renamed) return false;
     const synced = await this.prisma.keywordFieldSync.findFirst({
       where: { appId: app.id },
       select: { appId: true },

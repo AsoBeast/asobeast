@@ -7,10 +7,12 @@ import {
   ListedApp,
   LocalizedCapture,
 } from './localized-listing-capture.service';
+import { consoleListingOf, staleConsoleListing } from './console-listing';
 import { provenHomeDefault } from './home-default';
 
 export interface CapturedDefault {
   description: string;
+  version: string | null;
   raw: unknown;
 }
 
@@ -38,11 +40,31 @@ export class DefaultLocalizationRecorder {
       return app.defaultLocalization;
     }
     try {
+      const consoleListing = consoleListingOf(
+        await this.prisma.keywordFieldSync.findFirst({
+          where: { appId: app.id },
+          select: {
+            version: true,
+            primaryLocale: true,
+            descriptionFingerprints: true,
+          },
+        }),
+      );
+      if (
+        staleConsoleListing(
+          consoleListing,
+          listing.description,
+          listing.version,
+        )
+      ) {
+        return app.defaultLocalization;
+      }
       const proven = provenHomeDefault({
         home: app.country,
         description: listing.description,
         probes: localized.probes,
         declared: extractRawFacts(app.store, listing.raw).languages,
+        consoleListing,
       });
       if (proven !== app.defaultLocalization) {
         await this.prisma.withTransaction(async (tx) => {

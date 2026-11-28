@@ -2,15 +2,18 @@ import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { DefaultLocalizationRecorder } from './default-localization-recorder';
+import { descriptionFingerprint } from './description-fingerprint';
 import type { LocalizedCapture } from './localized-listing-capture.service';
 
 const POLISH = {
+  version: '4.0',
   description:
     'Dzienniczek to aplikacja dla uczniów i rodziców. Sprawdzaj oceny, frekwencję i plan lekcji w jednym miejscu. Aplikacja działa z dziennikiem szkolnym i jest dostępna dla każdej szkoły, która korzysta z systemu. Wszystkie dane są bezpieczne, a logowanie jest proste i szybkie.',
   raw: { languages: ['PL'] },
 };
 
 const ENGLISH = {
+  version: '4.0',
   description:
     'The diary is an app for students and their parents. Check your grades, attendance and timetable in one place. The app works with the school register and is open to every school that uses the system.',
   raw: { languages: ['EN', 'PL'] },
@@ -34,6 +37,7 @@ const captured = (complete = true): LocalizedCapture => ({
 });
 
 const GERMAN = {
+  version: '4.0',
   description:
     'Das Tagebuch ist eine App für Schüler und ihre Eltern. Sieh dir deine Noten, die Anwesenheit und den Stundenplan an einem Ort an. Die App arbeitet mit dem Klassenbuch der Schule und ist für jede Schule offen, die das System nutzt.',
   raw: { languages: ['DE', 'EN'] },
@@ -46,10 +50,15 @@ const englishProbe = (): LocalizedCapture => ({
   complete: true,
 });
 
-const build = (update = jest.fn().mockResolvedValue({})) => {
+const build = (
+  update = jest.fn().mockResolvedValue({}),
+  synced: unknown = null,
+) => {
   const $executeRaw = jest.fn().mockResolvedValue(1);
   const tx = { $executeRaw, app: { update } };
+  const findFirst = jest.fn().mockResolvedValue(synced);
   const prisma = {
+    keywordFieldSync: { findFirst },
     withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
       work(tx),
     ),
@@ -58,6 +67,7 @@ const build = (update = jest.fn().mockResolvedValue({})) => {
     recorder: new DefaultLocalizationRecorder(prisma),
     update,
     $executeRaw,
+    findFirst,
   };
 };
 
@@ -231,5 +241,89 @@ describe('DefaultLocalizationRecorder', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  describe('with a console listing', () => {
+    const inGermany = { ...APP, country: 'de' };
+    const synced = (fingerprints: unknown, version: string | null = '4.0') => ({
+      version,
+      primaryLocale: 'en-US',
+      descriptionFingerprints: fingerprints,
+    });
+
+    it('reads the import row by app only and records the localization it names', async () => {
+      const { recorder, update, findFirst } = build(
+        undefined,
+        synced({ 'en-US': descriptionFingerprint(ENGLISH.description) }),
+      );
+
+      await recorder.record(inGermany, 'de', ENGLISH, englishProbe());
+
+      expect(findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { appId: APP.id } }),
+      );
+      expect(update).toHaveBeenCalledWith({
+        where: { id: APP.id },
+        data: { defaultLocalization: 'en-US' },
+      });
+    });
+
+    it('falls back to the public proof without a row', async () => {
+      const { recorder, update } = build();
+
+      await recorder.record(inGermany, 'de', ENGLISH, englishProbe());
+
+      expect(update).toHaveBeenCalledWith({
+        where: { id: APP.id },
+        data: { defaultLocalization: 'en-GB' },
+      });
+    });
+
+    it('falls back to the public proof on fingerprints it cannot read', async () => {
+      const { recorder, update } = build(undefined, synced(['en-US']));
+
+      await recorder.record(inGermany, 'de', ENGLISH, englishProbe());
+
+      expect(update).toHaveBeenCalledWith({
+        where: { id: APP.id },
+        data: { defaultLocalization: 'en-GB' },
+      });
+    });
+
+    it('keeps the current localization while the console shows another version', async () => {
+      const { recorder, update } = build(
+        undefined,
+        synced({ 'en-US': descriptionFingerprint('A newer text.') }, '5.0'),
+      );
+
+      await expect(
+        recorder.record(
+          { ...inGermany, defaultLocalization: 'en-US' },
+          'de',
+          ENGLISH,
+          englishProbe(),
+        ),
+      ).resolves.toBe('en-US');
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('falls through to the public proof on a miss of the same version', async () => {
+      const { recorder, update } = build(
+        undefined,
+        synced({ 'en-US': descriptionFingerprint('Another text.') }),
+      );
+
+      await recorder.record(
+        { ...inGermany, defaultLocalization: 'en-US' },
+        'de',
+        ENGLISH,
+        englishProbe(),
+      );
+
+      expect(update).toHaveBeenCalledWith({
+        where: { id: APP.id },
+        data: { defaultLocalization: 'en-GB' },
+      });
+    });
   });
 });
