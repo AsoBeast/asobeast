@@ -220,6 +220,33 @@ describe('KeywordBreakdownService.breakdown', () => {
     });
   });
 
+  it('counts a save of a home field its home storefront does not list', async () => {
+    const prisma = buildPrisma({ market: 'de' });
+    prisma.app.findFirst.mockResolvedValue({
+      id: 'you',
+      workspaceId: 'ws',
+      store: Store.APP_STORE,
+      country: 'de',
+      defaultLocalization: 'en-US',
+      storeAppId: '1',
+      isCompetitor: false,
+    });
+    prisma.keywordField.findMany.mockResolvedValue([
+      {
+        localization: 'en-US',
+        phrases: ['habit tracker'],
+        updatedAt: new Date('2026-10-17T00:00:00Z'),
+      },
+    ]);
+
+    const result = await serviceFor(prisma).breakdown('you', 'kw-1');
+
+    expect(result.standing.recentChange).toEqual({
+      date: '2026-10-17',
+      source: 'keywordField',
+    });
+  });
+
   it('answers the keyword, its market and its words', async () => {
     const result = await serviceFor(buildPrisma()).breakdown('you', 'kw-1');
 

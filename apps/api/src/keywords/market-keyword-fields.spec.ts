@@ -153,4 +153,28 @@ describe('marketReads', () => {
 
     expect(polish).toMatchObject({ localization: 'pl', origin: 'home' });
   });
+
+  it('lists a home localization its storefront does not list first at home only', () => {
+    const input = {
+      home: 'de',
+      defaultLocalization: 'en-US',
+      shipped: nothingShipped,
+      fields: none,
+    };
+
+    expect(
+      marketReads({ ...input, country: 'de' }).map(
+        ({ localization, role, origin }) => [localization, role, origin],
+      ),
+    ).toEqual([
+      ['en-US', 'default', 'home'],
+      ['de', 'default', null],
+      ['en-GB', 'additional', null],
+    ]);
+    expect(
+      marketReads({ ...input, country: 'fr' }).map(
+        ({ localization }) => localization,
+      ),
+    ).not.toContain('en-US');
+  });
 });

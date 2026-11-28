@@ -310,9 +310,10 @@ export function defaultLocalizationIn(
   app: DefaultingListing,
   market: string,
 ): AppStoreLocalization {
-  const read = keywordFieldLocalizations(market);
   const own = app.defaultLocalization;
-  return (market === app.country && read.find((tag) => tag === own)) || read[0];
+  return market === app.country && isAppStoreLocalization(own)
+    ? own
+    : keywordFieldLocalizations(market)[0];
 }
 
 export function localizationReadOrder(

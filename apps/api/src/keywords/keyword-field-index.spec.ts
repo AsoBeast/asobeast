@@ -29,6 +29,31 @@ describe('indexKeywordFields', () => {
   );
 });
 
+describe('indexKeywordFields of a home localization its storefront does not list', () => {
+  const fields = [{ localization: 'en-US', phrases: ['podcast'] }];
+
+  it('counts the field in the home storefront and where the storefront lists it', () => {
+    const index = indexKeywordFields(
+      { country: 'de', defaultLocalization: 'en-US' },
+      fields,
+    );
+
+    expect(index('de', 'podcast')).toBe(true);
+    expect(index('us', 'podcast')).toBe(true);
+    expect(index('fr', 'podcast')).toBe(false);
+  });
+
+  it('counts it only where the storefront lists it without a recorded home', () => {
+    const index = indexKeywordFields(
+      { country: 'de', defaultLocalization: null },
+      fields,
+    );
+
+    expect(index('de', 'podcast')).toBe(false);
+    expect(index('us', 'podcast')).toBe(true);
+  });
+});
+
 describe('reportedSource', () => {
   it('reports a member as the keyword field whatever else tracks it', () => {
     expect(reportedSource(KeywordSource.MANUAL, true)).toBe(

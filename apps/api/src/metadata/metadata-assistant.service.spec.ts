@@ -120,6 +120,42 @@ describe('MetadataAssistantService', () => {
     );
   });
 
+  it('names the home storefront as a reader of a home localization it does not list', async () => {
+    const spend = jest.fn().mockRejectedValue(new Error('stop'));
+    const service = new MetadataAssistantService(
+      gateway(buildAi(spend)),
+      {
+        app: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'app-1',
+            store: 'APP_STORE',
+            country: 'de',
+            defaultLocalization: 'en-US',
+            name: 'Family Lab',
+          }),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+      } as unknown as PrismaService,
+      {
+        keywordCountries: jest
+          .fn()
+          .mockResolvedValue([{ country: 'de', keywordCount: 1 }]),
+        listTracked: jest.fn().mockResolvedValue([]),
+      } as unknown as KeywordsService,
+      {
+        audit: jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
+      } as unknown as MetadataService,
+    );
+
+    await expect(
+      service.generate('app-1', { localization: 'en-US' }, 'usr_1'),
+    ).rejects.toThrow('stop');
+    expect(JSON.stringify(spend.mock.calls[0])).toContain(
+      "Storefronts among this app's markets that read it: DE.",
+    );
+  });
+
   it('drafts through the gateway on behalf of the requesting user', async () => {
     const spend = jest.fn().mockRejectedValue(new Error('stop'));
 

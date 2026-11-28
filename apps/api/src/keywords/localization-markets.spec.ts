@@ -2,6 +2,7 @@ import {
   appMarkets,
   homeLocalizationOf,
   readersOf,
+  storefrontReads,
   readerRole,
   readsKeywordField,
   trackInError,
@@ -162,5 +163,47 @@ describe('trackInError', () => {
     expect(trackInError(app, 'en-US', ['de'], markets)).toBe(
       "DE is not one of this app's markets",
     );
+  });
+});
+
+describe('a home localization its storefront does not list', () => {
+  const offList = { country: 'de', defaultLocalization: 'en-US' };
+
+  it('reads it first as the default of the home storefront', () => {
+    expect(storefrontReads(offList, 'de')).toEqual([
+      { localization: 'en-US', role: 'default' },
+      { localization: 'de', role: 'default' },
+      { localization: 'en-GB', role: 'additional' },
+    ]);
+  });
+
+  it('gives it the default role at home only and keeps the listed roles', () => {
+    expect(readerRole(offList, 'de', 'en-US')).toBe('default');
+    expect(readerRole(offList, 'fr', 'en-US')).toBeNull();
+    expect(readerRole(offList, 'de', 'en-GB')).toBe('additional');
+  });
+
+  it('names the home market and the storefronts that list it as readers', () => {
+    expect(readersOf(offList, 'en-US', ['de', 'fr', 'us'])).toEqual([
+      { country: 'de', role: 'default', home: true },
+      { country: 'us', role: 'default', home: false },
+    ]);
+  });
+
+  it('accepts the home market for its field and refuses another market', () => {
+    expect(trackInError(offList, 'en-US', ['de'], ['de', 'fr'])).toBeNull();
+    expect(trackInError(offList, 'en-US', ['fr'], ['de', 'fr'])).toBe(
+      'The FR storefront does not read English (U.S.)',
+    );
+  });
+
+  it('keeps the table roles of a listed home localization', () => {
+    const listed = { country: 'de', defaultLocalization: 'en-GB' };
+
+    expect(storefrontReads(listed, 'de')).toEqual([
+      { localization: 'de', role: 'default' },
+      { localization: 'en-GB', role: 'additional' },
+    ]);
+    expect(readerRole(listed, 'de', 'en-GB')).toBe('additional');
   });
 });

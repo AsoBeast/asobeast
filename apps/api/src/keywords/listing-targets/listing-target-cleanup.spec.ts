@@ -71,4 +71,18 @@ describe('slotsAfterUntrack', () => {
       ),
     ).toEqual([]);
   });
+
+  it('empties the slot of a home localization its storefront does not list after an untrack at home', () => {
+    expect(
+      slotsAfterUntrack(
+        ['podcast'],
+        {
+          app: { country: 'de', defaultLocalization: 'en-US' },
+          localization: 'en-US',
+        },
+        [{ text: 'podcast', country: 'de' }],
+        [],
+      ),
+    ).toEqual([]);
+  });
 });
