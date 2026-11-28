@@ -4,7 +4,7 @@ describe('descriptionFingerprint', () => {
   const text = 'Plan your family week.\nShare chores and the calendar.';
 
   it.each([
-    ['windows line endings', text.replace('\n', '\r\n')],
+    ['windows line endings', text.replaceAll('\n', '\r\n')],
     ['runs of spaces', text.replace(' your', '   your')],
     ['tabs', text.replace(' the', '\tthe')],
     ['a trailing newline', `${text}\n`],
