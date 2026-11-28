@@ -50,6 +50,7 @@ export class LocalizedKeywordFieldService {
     await refuseManagedField(this.prisma, this.box, app.id);
     const { phrases, duplicatesRemoved } = parseFieldText(request.text);
     const refusal = trackInError(
+      app,
       localization,
       request.trackIn,
       await loadAppMarkets(this.prisma, app),
@@ -85,7 +86,7 @@ export class LocalizedKeywordFieldService {
       }),
       this.quota.usage(),
     ]);
-    const readers = readersOf(localization, markets, app.country);
+    const readers = readersOf(app, localization, markets);
     const tracking = await loadTrackingStates(
       this.prisma,
       app,

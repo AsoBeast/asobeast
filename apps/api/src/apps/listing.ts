@@ -43,7 +43,7 @@ export function storedLocalization(
   const readsDefault =
     localization === null ||
     (app.store === Store.APP_STORE &&
-      (readerRole(market, localization) === 'default' ||
+      (readerRole(app, market, localization) === 'default' ||
         localization === defaultLocalizationIn(app, market)));
   return readsDefault ? null : localization;
 }

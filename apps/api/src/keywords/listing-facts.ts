@@ -54,7 +54,7 @@ export async function listingFacts(
   const facts: AppFacts = {
     snapshotText,
     marketTexts,
-    inKeywordField: indexKeywordFields(stored),
+    inKeywordField: indexKeywordFields(app, stored),
     ...(profile
       ? {
           classOf: keywordClassifier(profile, {

@@ -5,7 +5,11 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { recordAppLocalizations } from './app-localization-records';
 import { FirstPositionChecks } from './first-position-checks';
-import { indexKeywordFields, storedPhrases } from './keyword-field-index';
+import {
+  indexKeywordFields,
+  keywordFieldOwner,
+  storedPhrases,
+} from './keyword-field-index';
 import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordApp } from './keywords.support';
@@ -76,7 +80,7 @@ export class KeywordFieldWriter {
       );
       await this.untrackDropped(
         tx,
-        app.id,
+        app,
         localization,
         before.filter((phrase) => !phrases.includes(phrase)),
       );
@@ -98,7 +102,7 @@ export class KeywordFieldWriter {
       await tx.appLocalization.deleteMany({
         where: { appId: app.id, localization },
       });
-      await this.untrackDropped(tx, app.id, localization, before);
+      await this.untrackDropped(tx, app, localization, before);
     });
   }
 
@@ -219,15 +223,15 @@ export class KeywordFieldWriter {
 
   private async untrackDropped(
     tx: Prisma.TransactionClient,
-    appId: string,
+    app: KeywordApp,
     localization: string,
     dropped: string[],
   ): Promise<void> {
     if (dropped.length === 0) return;
-    const [rows, fields] = await Promise.all([
+    const [rows, owner, fields] = await Promise.all([
       tx.trackedKeyword.findMany({
         where: {
-          appId,
+          appId: app.id,
           active: true,
           source: 'KEYWORD_FIELD',
           keyword: { is: { text: { in: dropped } } },
@@ -237,21 +241,23 @@ export class KeywordFieldWriter {
           keyword: { select: { text: true, country: true } },
         },
       }),
+      keywordFieldOwner(tx, app.id),
       tx.keywordField.findMany({
-        where: { appId },
+        where: { appId: app.id },
         select: { localization: true, phrases: true },
       }),
     ]);
-    const held = indexKeywordFields(fields);
+    const reader = owner ?? app;
+    const held = indexKeywordFields(reader, fields);
     const untracked = rows.filter(
       ({ keyword }) =>
-        readsKeywordField(keyword.country, localization) &&
+        readsKeywordField(reader, keyword.country, localization) &&
         !held(keyword.country, keyword.text),
     );
     if (untracked.length === 0) return;
     await tx.trackedKeyword.updateMany({
       where: {
-        appId,
+        appId: app.id,
         active: true,
         source: 'KEYWORD_FIELD',
         keywordId: { in: untracked.map((row) => row.keywordId) },

@@ -7,7 +7,10 @@ describe('indexKeywordFields', () => {
     { localization: 'es-MX', phrases: ['habito'] },
     { localization: 'de', phrases: ['gewohnheit'] },
   ];
-  const index = indexKeywordFields(fields);
+  const index = indexKeywordFields(
+    { country: 'us', defaultLocalization: null },
+    fields,
+  );
 
   it.each([
     ['us', 'habit', true],

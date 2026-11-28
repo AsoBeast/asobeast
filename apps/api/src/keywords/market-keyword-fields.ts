@@ -2,11 +2,10 @@ import {
   AppLocalizationOrigin,
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
-  keywordFieldLocalizations,
   MarketLocalizationRead,
 } from '@asobeast/shared';
 import type { FieldPhrases } from '../metadata/listing-surfaces';
-import { homeLocalizationOf } from './localization-markets';
+import { homeLocalizationOf, storefrontReads } from './localization-markets';
 
 export interface MarketReadsInput {
   country: string;
@@ -23,15 +22,16 @@ export function marketReads({
   shipped,
   fields,
 }: MarketReadsInput): MarketLocalizationRead[] {
-  const homeTag = homeLocalizationOf({ country: home, defaultLocalization });
-  return keywordFieldLocalizations(country).map(
-    (localization, index): MarketLocalizationRead => {
+  const owner = { country: home, defaultLocalization };
+  const homeTag = homeLocalizationOf(owner);
+  return storefrontReads(owner, country).map(
+    ({ localization, role }): MarketLocalizationRead => {
       const origin: AppLocalizationOrigin | null =
         localization === homeTag ? 'home' : (shipped.get(localization) ?? null);
       const phrases = [...(fields.get(localization) ?? [])];
       return {
         localization,
-        role: index === 0 ? 'default' : 'additional',
+        role,
         shipped: origin !== null,
         origin,
         phrases,

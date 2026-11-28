@@ -44,7 +44,8 @@ export function toAppLocalizationItems({
   stored,
   fields,
 }: AppLocalizationInput): AppLocalizationItem[] {
-  const homeTag = homeLocalizationOf({ country: home, defaultLocalization });
+  const owner = { country: home, defaultLocalization };
+  const homeTag = homeLocalizationOf(owner);
   const origins = new Map<AppStoreLocalization, AppLocalizationOrigin>();
   const saved = new Map<AppStoreLocalization, StoredField>();
   for (const field of fields) {
@@ -72,7 +73,7 @@ export function toAppLocalizationItems({
       phrases,
       charactersUsed: keywordFieldChars(phrases),
       charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-      readBy: readersOf(localization, markets, home),
+      readBy: readersOf(owner, localization, markets),
       updatedAt: field ? field.updatedAt.toISOString() : null,
     };
   };

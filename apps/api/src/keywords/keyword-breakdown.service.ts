@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  type DefaultingListing,
   type KeywordBreakdown,
-  keywordFieldLocalizations,
 } from '@asobeast/shared';
 import {
   eventsOfMarket,
@@ -31,6 +31,7 @@ import {
   sortBreakdown,
 } from './keyword-breakdown-subject';
 import { ensurePrimaryApp } from './keywords.support';
+import { storefrontReads } from './localization-markets';
 
 const COMPETITOR_REFUSAL =
   'A competitor app has no keyword breakdown; use its primary app';
@@ -112,7 +113,7 @@ export class KeywordBreakdownService {
       market,
       words,
     });
-    const fieldChange = newestFieldSave(fields, market);
+    const fieldChange = newestFieldSave(fields, app, market);
     return {
       keywordId,
       text,
@@ -246,9 +247,12 @@ function toListing(
 
 function newestFieldSave(
   fields: readonly SavedField[],
+  app: DefaultingListing,
   market: string,
 ): Date | null {
-  const read = new Set<string>(keywordFieldLocalizations(market));
+  const read = new Set<string>(
+    storefrontReads(app, market).map(({ localization }) => localization),
+  );
   return fields
     .filter((field) => read.has(field.localization))
     .reduce<Date | null>(

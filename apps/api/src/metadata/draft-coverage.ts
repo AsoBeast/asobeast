@@ -16,7 +16,10 @@ import {
 } from '@asobeast/shared';
 import { storedLocalization } from '../apps/listing';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
-import { readsKeywordField } from '../keywords/localization-markets';
+import {
+  readsKeywordField,
+  storefrontReads,
+} from '../keywords/localization-markets';
 import {
   CoverageSources,
   JudgedApp,
@@ -156,10 +159,12 @@ export function draftMarkets(
     if (target.store === Store.GOOGLE_PLAY) {
       if (listingCountry === drafted) judged.push(market);
     } else if (
-      keywordFieldLocalizations(listingCountry).includes(target.localization)
+      storefrontReads(app, listingCountry).some(
+        ({ localization }) => localization === target.localization,
+      )
     ) {
       judged.push(market);
-    } else if (readsKeywordField(market, target.localization)) {
+    } else if (readsKeywordField(app, market, target.localization)) {
       waiting.push(market);
     }
   }

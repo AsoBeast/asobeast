@@ -214,6 +214,11 @@ describe('StoreSuggestions.plan', () => {
   } = {}) => {
     const prisma = {
       keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+      app: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ country: 'us', defaultLocalization: null }),
+      },
       trackedKeyword: { findMany: jest.fn().mockResolvedValue(tracked) },
       appSnapshot: { findFirst: jest.fn().mockResolvedValue(snapshot) },
     };

@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
+import type { DefaultingListing } from '@asobeast/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { keywordFieldOwner } from '../keyword-field-index';
 import { serializeKeywordField } from '../keyword-field-writer';
 import { readsKeywordField } from '../localization-markets';
 
@@ -11,23 +13,29 @@ export interface UntrackedPair {
 
 type Pair = Pick<UntrackedPair, 'text' | 'country'>;
 
-const readIn = (pairs: readonly Pair[], text: string, localization: string) =>
+interface TargetField {
+  app: DefaultingListing;
+  localization: string;
+}
+
+const readIn = (
+  { app, localization }: TargetField,
+  pairs: readonly Pair[],
+  text: string,
+) =>
   pairs.some(
     (pair) =>
-      pair.text === text && readsKeywordField(pair.country, localization),
+      pair.text === text && readsKeywordField(app, pair.country, localization),
   );
 
 export function slotsAfterUntrack(
   slots: readonly string[],
-  localization: string,
+  field: TargetField,
   removed: readonly Pair[],
   remaining: readonly Pair[],
 ): string[] {
   const kept = slots.map((slot) =>
-    readIn(removed, slot, localization) &&
-    !readIn(remaining, slot, localization)
-      ? ''
-      : slot,
+    readIn(field, removed, slot) && !readIn(field, remaining, slot) ? '' : slot,
   );
   while (kept.at(-1) === '') {
     kept.pop();
@@ -45,7 +53,8 @@ async function dropUntrackedTargets(
   removed: readonly UntrackedPair[],
 ): Promise<void> {
   const texts = [...new Set(removed.map(({ text }) => text))];
-  const [targets, remaining] = await Promise.all([
+  const [owner, targets, remaining] = await Promise.all([
+    keywordFieldOwner(tx, appId),
     tx.listingTarget.findMany({
       where: { appId, slots: { hasSome: texts } },
       select: { localization: true, slots: true },
@@ -55,9 +64,15 @@ async function dropUntrackedTargets(
       select: { keyword: { select: { text: true, country: true } } },
     }),
   ]);
+  if (owner === null) return;
   const left = remaining.map(({ keyword }) => keyword);
   for (const { localization, slots } of targets) {
-    const next = slotsAfterUntrack(slots, localization, removed, left);
+    const next = slotsAfterUntrack(
+      slots,
+      { app: owner, localization },
+      removed,
+      left,
+    );
     if (sameSlots(slots, next)) continue;
     const where = { appId_localization: { appId, localization } };
     await (next.length === 0

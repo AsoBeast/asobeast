@@ -123,7 +123,7 @@ export class KeywordFieldService {
         charactersUsed: keywordFieldChars(field.phrases),
         charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
         markets: markets.filter((market) =>
-          readsKeywordField(market, field.localization),
+          readsKeywordField(app, market, field.localization),
         ),
         updatedAt: field.updatedAt.toISOString(),
       }));
