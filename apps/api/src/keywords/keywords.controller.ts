@@ -244,7 +244,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Read a stored iOS keyword field',
     description:
-      'Returns the keyword field of one App Store localization: phrases is the field as saved, in order, and tracked is those of its phrases tracked and active in country. Without a query it reads the home localization, the one the home listing is written in. duplicatesRemoved is always 0 because a read discards nothing.',
+      'Returns the keyword field of one App Store localization: phrases is the field as saved, in order, and tracked is those of its phrases tracked and active in country. Without a query it reads the home localization, the one the home listing is written in, which may be a localization the home storefront does not list. duplicatesRemoved is always 0 because a read discards nothing.',
   })
   keywordField(
     @Param('id') id: string,
@@ -268,7 +268,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Set an iOS keyword field',
     description:
-      'Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home localization, the one the home listing is written in. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Answers 409 when the field is imported from App Store Connect. Saves to one app are written one at a time, so the last save wins.',
+      "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home localization, the one the home listing is written in. Answers 400 when the storefront does not read the localization, unless it is the app's home localization and country is its home storefront, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Answers 409 when the field is imported from App Store Connect. Saves to one app are written one at a time, so the last save wins.",
   })
   setKeywordField(
     @Param('id') id: string,

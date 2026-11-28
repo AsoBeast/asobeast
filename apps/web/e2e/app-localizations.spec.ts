@@ -3,6 +3,7 @@ import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import {
   APP_DE_ENGLISH_ID,
+  APP_DE_US_ENGLISH_ID,
   APP_PL_NATIVE_ID,
   APP_RIVAL_ID,
   type LocalizationSeed,
@@ -1509,4 +1510,55 @@ test("shows the english home localization of an english app from germany", async
     english.panel.getByRole("button", { name: "Remove localization" }),
   ).toHaveCount(0);
   await expect(localizationItem(page, "German").trigger).toHaveCount(0);
+});
+
+const UNLISTED_HOME =
+  /The DE storefront does not list English \(U\.S\.\)\. It shows this listing by default/;
+
+test("explains a home localization the home storefront does not list", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_DE_US_ENGLISH_ID}/metadata?fieldLocale=en-US`);
+
+  const english = localizationItem(page, "English (U.S.)");
+  await expect(english.trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(english.trigger).toContainText("DE · Default");
+  await expect(
+    english.panel.getByRole("button", { name: "Remove localization" }),
+  ).toHaveCount(0);
+  await expect(english.panel.getByText(UNLISTED_HOME)).toBeVisible();
+  await expect(localizationItem(page, "German").trigger).toHaveCount(0);
+
+  const british = localizationItem(page, "English (U.K.)");
+  await expect(british.trigger).toContainText("Detected");
+  await british.trigger.click();
+  await expect(british.panel.getByText(UNLISTED_HOME)).toHaveCount(0);
+});
+
+test("says nothing more for a home localization its storefront lists", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_DE_ENGLISH_ID}/metadata?fieldLocale=en-GB`);
+  await expect(
+    localizationItem(page, "English (U.K.)").trigger,
+  ).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByText(/storefront does not list/)).toHaveCount(0);
+
+  await page.goto(`/apps/${APP_PL_NATIVE_ID}/metadata?fieldLocale=pl`);
+  await expect(localizationItem(page, "Polish").trigger).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(page.getByText(/storefront does not list/)).toHaveCount(0);
+});
+
+test("loads the keywords page of an app whose home its storefront does not list", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_DE_US_ENGLISH_ID}/keywords`);
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Family Lab" }),
+  ).toBeVisible();
+  await expect(page.getByRole("main")).not.toContainText("Try again");
 });

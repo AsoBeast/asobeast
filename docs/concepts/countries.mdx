@@ -158,6 +158,8 @@ Many ASO guides still name only Spanish (Mexico) for the United States. AsoBeast
 
 Apple's page lists languages; it does not describe search. In practice, App Store search in a storefront reads the title, subtitle and keyword field of every localization on that storefront's list, and the words of one localization combine into phrases only with each other. Each additional language is therefore extra room: its own 30 character title, 30 character subtitle and 100 character keyword field.
 
+The one exception is your home localization in your home storefront: when the home listing is in a localization the storefront does not list, AsoBeast reads it there as the storefront's default. See [When your storefront does not read your language](#when-your-storefront-does-not-read-your-language).
+
 ### How does AsoBeast keep a keyword field per localization?
 
 App Store Connect has one private keyword field per localization, and a new localization starts with it empty. AsoBeast keeps one keyword field per localization too, and it is edited in one place: the **App Store localizations** section of the metadata page, which has one editor for each localization your app ships. A storefront counts the fields of every localization it reads. The German field counts in Germany, Austria, Switzerland and Luxembourg, and the Spanish (Mexico) field counts in Mexico and in the United States.
@@ -183,7 +185,7 @@ An app ships a localization when it has its own text in App Store Connect. AsoBe
 
 | Origin | Which localization | How it got on the list |
 | --- | --- | --- |
-| Home | The localization your home listing is written in: your home storefront's default, or one of its other languages when AsoBeast proved the listing is written in it | It is always shipped, it is never stored as a row and it cannot be removed |
+| Home | The localization your home listing is written in: your home storefront's default, or another localization when AsoBeast proved the listing is written in it | It is always shipped, it is never stored as a row and it cannot be removed |
 | Manual | Any of the 50 localizations | You added it, or you saved a non-empty keyword field for it |
 | Detected | A localization the store served | AsoBeast captured the native localization of a listing, the listing of a market proved the market's default localization, or **Find localizations** found the store serving it |
 
@@ -213,15 +215,29 @@ A storefront shows its default page in its own language when your app has that l
 
 After each capture of the home listing AsoBeast checks whether the description reads as another language the storefront reads, such as English (U.K.) in Germany or English (U.S.) in Japan, and if so asks the store for that language too. When the store answers the same page (a default page that shows your category where the page in that language shows your subtitle still counts as the same page), the description reads as that language clearly more than as the storefront's own language, and the languages the app declares to Apple do not leave it out, that localization becomes the home localization. The keyword field editor names it, the metadata audit reads the listing under it and the keywords picked from the listing at import keep its words. An app with a listing in the storefront's own language, such as German in Germany, keeps that language and costs no extra listing read.
 
-The localization AsoBeast names is the one the storefront lists. If your only English localization in App Store Connect is English (U.S.), Germany still shows it to everyone, and AsoBeast calls it English (U.K.), the English Germany reads. Apple's [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/) table lists English (U.K.) as a language Germany supports, and a localization's keywords are searched in every storefront that supports its language, so adding an English (U.K.) localization with its own keyword field is how you choose the English keywords Germany reads. If App Store Connect manages your keyword fields, its import keeps your English (U.S.) field under English (U.S.), which Germany does not list, and the English (U.K.) home field stays empty.
+Without App Store Connect, AsoBeast names a listing the storefront shows in English by the English the storefront lists: an app whose only English localization in App Store Connect is English (U.S.) is called English (U.K.) in Germany, the English Germany reads. Apple's [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/) table lists English (U.K.) as a language Germany supports, and a localization's keywords are searched in every storefront that supports its language, so adding an English (U.K.) localization with its own keyword field is how you choose the English keywords Germany reads.
+
+With App Store Connect, when the app follows it (the keyword field import is on), AsoBeast compares the description of the page it captured with the description of each localization of the live version, and names the localization whose text it is, after the next refresh. An app whose German page is its English (U.S.) text is then called English (U.S.) in Germany, its imported English (U.S.) field is the home field, and its phrases are tracked in Germany. When several localizations carry the same description, the one the storefront lists wins, then the app's primary language. Right after a release, while the store page and App Store Connect show different versions, AsoBeast keeps the name it had; once both show the same version it checks again. When the name changes, AsoBeast imports the keyword fields once more, so the phrases of the new home field are tracked in your home country.
 
 These cases keep the storefront's default as the home localization:
 
-- The default page and the page the storefront gives customers who browse in English differ, which happens when your app has two English localizations with different text, such as English (U.S.) and English (U.K.) or English (Australia). The home listing is then in neither the storefront's language nor the English it lists. AsoBeast captures the page English readers get as a detected English (U.K.) localization of its own.
+- The default page and the page the storefront gives customers who browse in English differ, which happens when your app has two English localizations with different text, such as English (U.S.) and English (U.K.) or English (Australia). The home listing is then in neither the storefront's language nor the English it lists. Turn on the keyword field import for the app and AsoBeast names it from App Store Connect. Without it, AsoBeast captures the page English readers get as a detected English (U.K.) localization of its own.
 - Your app is written in Japanese, Chinese, Korean or Russian and its description mixes in more than a little English, or it is a Ukrainian app added from Russia: the two languages cannot be told apart reliably, so nothing is recorded.
-- Your app is written in a language the storefront does not read, such as a Polish app added from Germany, or in Catalan added from Spain.
+- Your app is written in a language the storefront does not read and that has more than one App Store localization, such as Spanish, French, Portuguese or Chinese added from Germany, or in Arabic or Hindi, whose scripts other App Store languages share. Catalan added from Spain stays Spanish too, because Spain reads Catalan and its text cannot be told from Spanish reliably.
 
 When your app later gets a listing in the storefront's language, the next capture reads it, the storefront's default becomes the home localization again and the other page is listed as detected.
+
+#### When your storefront does not read your language
+
+A storefront shows an app it has no language for in the app's own language. When the description reads clearly as a language the home storefront does not read, that language has a single App Store localization, and the languages the app declares to Apple include it, that localization becomes the home localization: a Polish app added from Germany is Polish, a Russian app added from France is Russian. AsoBeast asks the store nothing more for it.
+
+The keyword field editor, the audit and the keywords picked at import use it, and Germany reads its keyword field as Germany's default. Apple documents that a localization's keywords count where the App Store supports its language. It does not say whether a storefront reads the keyword field of a localization it does not list when that is the page it shows. AsoBeast counts it in the home storefront, because that storefront shows the page and searches its title.
+
+AsoBeast names such a listing by the language it is written in. If the text sits in another localization in App Store Connect, such as Polish text in English (U.S.), the keyword field import names it correctly.
+
+It only does so when Apple's declared languages for the app are that language, alone or with English. An app that declares several languages, or a language AsoBeast cannot tell from a close relative (Slovak from Czech, Malay from Indonesian, Bulgarian from Russian), keeps the storefront's language.
+
+A keyword field you saved under the storefront's language before stays where it was, as a localization you can remove. To use its words for the listing, copy them into the new home field and remove the old one.
 
 What AsoBeast still cannot know:
 

@@ -8,34 +8,56 @@ import {
   type LocalizationReadRole,
 } from '@asobeast/shared';
 
+export interface StorefrontRead {
+  localization: AppStoreLocalization;
+  role: LocalizationReadRole;
+}
+
 export const homeLocalizationOf = (
   app: DefaultingListing,
 ): AppStoreLocalization => defaultLocalizationIn(app, app.country);
 
-export function readerRole(
+export function storefrontReads(
+  app: DefaultingListing,
   country: string,
-  localization: string,
-): LocalizationReadRole | null {
-  const position = keywordFieldLocalizations(country).findIndex(
-    (tag) => tag === localization,
+): StorefrontRead[] {
+  const listed = keywordFieldLocalizations(country).map(
+    (localization, index): StorefrontRead => ({
+      localization,
+      role: index === 0 ? 'default' : 'additional',
+    }),
   );
-  if (position < 0) return null;
-  return position === 0 ? 'default' : 'additional';
+  const own = defaultLocalizationIn(app, country);
+  return listed.some((read) => read.localization === own)
+    ? listed
+    : [{ localization: own, role: 'default' }, ...listed];
 }
 
-export const readsKeywordField = (
+export const readerRole = (
+  app: DefaultingListing,
   country: string,
   localization: string,
-): boolean => readerRole(country, localization) !== null;
+): LocalizationReadRole | null =>
+  storefrontReads(app, country).find(
+    (read) => read.localization === localization,
+  )?.role ?? null;
+
+export const readsKeywordField = (
+  app: DefaultingListing,
+  country: string,
+  localization: string,
+): boolean => readerRole(app, country, localization) !== null;
 
 export const readersOf = (
+  app: DefaultingListing,
   localization: string,
   markets: readonly string[],
-  home: string,
 ): LocalizationReader[] =>
   markets.flatMap((country) => {
-    const role = readerRole(country, localization);
-    return role === null ? [] : [{ country, role, home: country === home }];
+    const role = readerRole(app, country, localization);
+    return role === null
+      ? []
+      : [{ country, role, home: country === app.country }];
   });
 
 export const appMarkets = (
@@ -47,6 +69,7 @@ export const appMarkets = (
 ];
 
 const refusalFor = (
+  app: DefaultingListing,
   localization: AppStoreLocalization,
   country: string,
   markets: readonly string[],
@@ -55,18 +78,19 @@ const refusalFor = (
   if (!markets.includes(country)) {
     return `${code} is not one of this app's markets`;
   }
-  return readsKeywordField(country, localization)
+  return readsKeywordField(app, country, localization)
     ? null
     : `The ${code} storefront does not read ${APP_STORE_LOCALIZATIONS[localization]}`;
 };
 
 export function trackInError(
+  app: DefaultingListing,
   localization: AppStoreLocalization,
   trackIn: readonly string[],
   markets: readonly string[],
 ): string | null {
   for (const country of trackIn) {
-    const refusal = refusalFor(localization, country, markets);
+    const refusal = refusalFor(app, localization, country, markets);
     if (refusal !== null) {
       return refusal;
     }

@@ -8,7 +8,7 @@ import {
 } from "@asobeast/shared";
 import { focusDraftLocalization } from "@/components/metadata/DraftLocalizationSelect";
 import { Accordion } from "@/components/ui/accordion";
-import { openLocalization } from "@/lib/app-localizations";
+import { openLocalization, unlistedHome } from "@/lib/app-localizations";
 import { additionOutcome } from "@/lib/keyword-field-addition";
 import { draftableLocalizations, storefrontRows } from "@/lib/localizations";
 import {
@@ -68,6 +68,7 @@ export function LocalizationList({
   const draftable = new Set(
     draftableLocalizations(storefrontRows(result.home, result.markets)),
   );
+  const unlisted = unlistedHome(result);
   const draft = (localization: AppStoreLocalization) => {
     void setDraftLocale(localization).then(focusDraftLocalization);
   };
@@ -109,6 +110,7 @@ export function LocalizationList({
               drafted={handed ? handoff.text : undefined}
               editorKey={editorKeyOf(handoffs, item.localization)}
               onProposalSettled={target || handed ? settleProposal : undefined}
+              unlistedIn={item.localization === unlisted ? result.home : null}
             />
           );
         })}

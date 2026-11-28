@@ -7,7 +7,10 @@ describe('indexKeywordFields', () => {
     { localization: 'es-MX', phrases: ['habito'] },
     { localization: 'de', phrases: ['gewohnheit'] },
   ];
-  const index = indexKeywordFields(fields);
+  const index = indexKeywordFields(
+    { country: 'us', defaultLocalization: null },
+    fields,
+  );
 
   it.each([
     ['us', 'habit', true],
@@ -24,6 +27,31 @@ describe('indexKeywordFields', () => {
       expect(index(country, text)).toBe(expected);
     },
   );
+});
+
+describe('indexKeywordFields of a home localization its storefront does not list', () => {
+  const fields = [{ localization: 'en-US', phrases: ['podcast'] }];
+
+  it('counts the field in the home storefront and where the storefront lists it', () => {
+    const index = indexKeywordFields(
+      { country: 'de', defaultLocalization: 'en-US' },
+      fields,
+    );
+
+    expect(index('de', 'podcast')).toBe(true);
+    expect(index('us', 'podcast')).toBe(true);
+    expect(index('fr', 'podcast')).toBe(false);
+  });
+
+  it('counts it only where the storefront lists it without a recorded home', () => {
+    const index = indexKeywordFields(
+      { country: 'de', defaultLocalization: null },
+      fields,
+    );
+
+    expect(index('de', 'podcast')).toBe(false);
+    expect(index('us', 'podcast')).toBe(true);
+  });
 });
 
 describe('reportedSource', () => {

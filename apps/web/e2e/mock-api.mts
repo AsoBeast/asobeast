@@ -388,9 +388,9 @@ import {
   parseKeywordField,
   keywordFieldLocalizations,
   defaultLocalizationIn,
-  readLocalizations,
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
+  type LocalizationReadRole,
   isAppStoreLocalization,
   SESSION_COOKIE,
   DEFAULT_PORTFOLIO_HISTORY_DAYS,
@@ -1584,7 +1584,11 @@ function keywordFieldTarget(
     );
     return undefined;
   }
-  const read = readLocalizations(country);
+  const read = storefrontReadsOf(
+    dataset.detail.id,
+    dataset.detail.country,
+    country,
+  ).map((entry) => entry.localization);
   const requested =
     query.get("localization") ?? defaultLocalizationIn(dataset.detail, country);
   const localization = read.find((tag) => tag === requested);
@@ -1614,18 +1618,48 @@ function trackedMarketsOf(id: string): string[] {
     .map((key) => key.slice(id.length + 1));
 }
 
-const readsTag = (
+function storefrontReadsOf(
+  id: string,
+  home: string,
+  country: string,
+): { localization: AppStoreLocalization; role: LocalizationReadRole }[] {
+  const listed = keywordFieldLocalizations(country).map(
+    (localization, index) => ({
+      localization,
+      role: index === 0 ? ("default" as const) : ("additional" as const),
+    }),
+  );
+  const own = country === home ? homeTagOf(id, home) : listed[0].localization;
+  return listed.some((read) => read.localization === own)
+    ? listed
+    : [{ localization: own, role: "default" as const }, ...listed];
+}
+
+const readerRoleOf = (
+  id: string,
+  home: string,
   country: string,
   localization: AppStoreLocalization,
-): boolean => keywordFieldLocalizations(country).includes(localization);
+): LocalizationReadRole | null =>
+  storefrontReadsOf(id, home, country).find(
+    (read) => read.localization === localization,
+  )?.role ?? null;
+
+const homeOf = (id: string): string => DATASETS[id]?.detail.country ?? "us";
+
+const readsTag = (
+  id: string,
+  country: string,
+  localization: AppStoreLocalization,
+): boolean => readerRoleOf(id, homeOf(id), country, localization) !== null;
 
 function heldByAnotherField(
   id: string,
   country: string,
   phrase: string,
 ): boolean {
-  return keywordFieldLocalizations(country).some((tag) =>
-    keywordFields.get(fieldKey(id, tag))?.includes(phrase),
+  return storefrontReadsOf(id, homeOf(id), country).some(({ localization }) =>
+    keywordFields.get(fieldKey(id, localization))?.includes(phrase),
   );
 }
 
@@ -1648,7 +1682,7 @@ function storeKeywordField(
     keywordFieldTracked.set(trackedKey(id, country), tracked);
   }
   for (const country of trackedMarketsOf(id)) {
-    if (!readsTag(country, localization)) continue;
+    if (!readsTag(id, country, localization)) continue;
     for (const phrase of dropped) {
       if (!heldByAnotherField(id, country, phrase)) {
         keywordFieldTracked.get(trackedKey(id, country))?.delete(phrase);
@@ -1888,17 +1922,8 @@ function localizationItemOf(
     charactersUsed: keywordFieldChars(phrases),
     charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
     readBy: markets.flatMap((country) => {
-      const index = keywordFieldLocalizations(country).indexOf(localization);
-      return index < 0
-        ? []
-        : [
-            {
-              country,
-              role:
-                index === 0 ? ("default" as const) : ("additional" as const),
-              home: country === home,
-            },
-          ];
+      const role = readerRoleOf(id, home, country, localization);
+      return role === null ? [] : [{ country, role, home: country === home }];
     }),
     updatedAt: phrases.length > 0 ? KEYWORD_FIELD_UPDATED_AT : null,
   };
@@ -1968,12 +1993,12 @@ function marketReadsOf(
   return {
     country,
     home: country === home,
-    localizations: keywordFieldLocalizations(country).map(
-      (localization, index): MarketLocalizationRead => {
+    localizations: storefrontReadsOf(id, home, country).map(
+      ({ localization, role }): MarketLocalizationRead => {
         const item = shipped.get(localization);
         return {
           localization,
-          role: index === 0 ? "default" : "additional",
+          role,
           shipped: item !== undefined,
           origin: item?.origin ?? null,
           phrases: item?.phrases ?? [],
@@ -2069,7 +2094,7 @@ function trackInRefusal(
     if (!markets.includes(country)) {
       return `${country.toUpperCase()} is not one of this app's markets`;
     }
-    if (!readsTag(country, localization)) {
+    if (!readsTag(id, country, localization)) {
       return `The ${country.toUpperCase()} storefront does not read ${APP_STORE_LOCALIZATIONS[localization]}`;
     }
   }

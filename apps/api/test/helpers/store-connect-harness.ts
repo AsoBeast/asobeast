@@ -9,6 +9,7 @@ import { Queue } from 'bullmq';
 import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { QUEUES } from '../../src/jobs/jobs.types';
+import { StoreProviderRegistry } from '../../src/store-providers/store-provider.registry';
 import { AscUnreachableError } from '../../src/store-connect/asc-errors';
 import {
   ASC_TRANSPORT,
@@ -176,7 +177,9 @@ export async function pauseStoreReports(app: INestApplication): Promise<void> {
   await app.get<Queue>(getQueueToken(QUEUES.STORE_CONNECT)).pause();
 }
 
-export async function startStoreConnectApp(): Promise<StoreConnectHarness> {
+export async function startStoreConnectApp(
+  stores?: Pick<StoreProviderRegistry, 'get'>,
+): Promise<StoreConnectHarness> {
   execSync('pnpm prisma migrate deploy', {
     cwd: join(__dirname, '..', '..'),
     env: process.env,
@@ -184,14 +187,16 @@ export async function startStoreConnectApp(): Promise<StoreConnectHarness> {
   });
   const asc = new ScriptedAppStoreConnect();
   const gcs = new ScriptedGoogleCloud();
-  const moduleFixture = await Test.createTestingModule({
-    imports: [AppModule],
-  })
+  const builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ASC_TRANSPORT)
     .useValue(asc.transport)
     .overrideProvider(GCS_TRANSPORT)
-    .useValue(gcs.transport)
-    .compile();
+    .useValue(gcs.transport);
+  const moduleFixture = await (
+    stores
+      ? builder.overrideProvider(StoreProviderRegistry).useValue(stores)
+      : builder
+  ).compile();
   const app = moduleFixture.createNestApplication<INestApplication<App>>();
   useCookies(app);
   await app.init();

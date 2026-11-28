@@ -268,6 +268,25 @@ describe('withDraft on the App Store', () => {
     ).toEqual({ judged: [], waiting: ['gb', 'de'] });
   });
 
+  it('judges a draft of a home localization its storefront does not list in the home market', () => {
+    const offList = {
+      ...appStore,
+      country: 'de',
+      defaultLocalization: 'en-US',
+    };
+    const live = sources([
+      ['de', texts({ title: 'Family Lab' })],
+      ['fr', texts({ title: 'Family Lab' })],
+    ]);
+
+    expect(
+      draftMarkets(offList, ['de', 'fr'], live, {
+        store: Store.APP_STORE,
+        localization: 'en-US',
+      }),
+    ).toEqual({ judged: ['de'], waiting: [] });
+  });
+
   it('judges a market that reads the localization once its own listing is captured', () => {
     const live = sources([
       ['us', texts({ title: 'Focus Timer' })],

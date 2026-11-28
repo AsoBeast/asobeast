@@ -181,8 +181,6 @@ export class ListingTargetsService {
     localization: AppStoreLocalization,
   ): Promise<string[]> {
     const markets = await loadAppMarkets(this.prisma, app);
-    return readersOf(localization, markets, app.country).map(
-      ({ country }) => country,
-    );
+    return readersOf(app, localization, markets).map(({ country }) => country);
   }
 }

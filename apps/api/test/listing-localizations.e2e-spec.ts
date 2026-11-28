@@ -35,6 +35,7 @@ import {
   LocalizedRegistry,
   PL_APP_URL,
   POLISH,
+  POLISH_MYTHS,
   POLISH_ONLY,
   US_APP_URL,
 } from './helpers/localized-store';
@@ -1213,6 +1214,172 @@ describe('Native localizations of a listing (e2e)', () => {
 
       expect(englishProbes('de')).toEqual([]);
       await expect(defaultOf(competitor.id)).resolves.toBeNull();
+    });
+  });
+
+  describe('a home localization its storefront does not list', () => {
+    const recordedUsEnglish = async () => {
+      registry.listings.set('de:default', ENGLISH_ONLY);
+      const appId = await importFrom(DE_APP_URL);
+      await prisma.app.update({
+        where: { id: appId },
+        data: { defaultLocalization: 'en-US' },
+      });
+      return appId;
+    };
+
+    const marketOf = async (appId: string, country?: string) =>
+      (
+        (
+          await api
+            .get(`/apps/${appId}/keyword-fields/market`)
+            .query(country ? { country } : {})
+            .expect(200)
+        ).body as MarketKeywordFields
+      ).localizations.map(({ localization, role, origin }) => ({
+        localization,
+        role,
+        origin,
+      }));
+
+    it('lists english (u.s.) as the home item read by germany as its default', async () => {
+      const appId = await recordedUsEnglish();
+
+      const items = await localizationItems(appId);
+
+      expect(items[0]).toMatchObject({
+        localization: 'en-US',
+        origin: 'home',
+        readBy: [{ country: 'de', role: 'default', home: true }],
+      });
+      expect(items.map((item) => item.localization)).not.toContain('de');
+    });
+
+    it('saves the english (u.s.) home field tracking in germany', async () => {
+      const appId = await recordedUsEnglish();
+
+      const saved = await api
+        .put(`/apps/${appId}/keyword-fields/en-US`)
+        .send({ text: 'podcast player', trackIn: ['de'] })
+        .expect(200);
+
+      expect(saved.body).toMatchObject({ trackedIn: ['de'] });
+    });
+
+    it('reads english (u.s.) first in the home market view', async () => {
+      const appId = await recordedUsEnglish();
+
+      await expect(marketOf(appId)).resolves.toEqual([
+        { localization: 'en-US', role: 'default', origin: 'home' },
+        { localization: 'de', role: 'default', origin: null },
+        { localization: 'en-GB', role: 'additional', origin: null },
+      ]);
+    });
+
+    it('leaves english (u.s.) out of another market view', async () => {
+      const appId = await recordedUsEnglish();
+
+      const reads = await marketOf(appId, 'fr');
+
+      expect(reads.map(({ localization }) => localization)).not.toContain(
+        'en-US',
+      );
+      expect(reads[0]).toMatchObject({ localization: 'fr', role: 'default' });
+    });
+
+    it('audits the english (u.s.) default listing and still answers under de', async () => {
+      const appId = await recordedUsEnglish();
+
+      const audit = (await api.get(`/apps/${appId}/metadata/audit`).expect(200))
+        .body as MetadataAuditResult;
+      const underDe = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=de`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(audit.keywordFieldSuggestion?.localization).toBe('en-US');
+      expect(titleOf(audit)).toBe(ENGLISH_ONLY.title);
+      expect(titleOf(underDe)).toBe(ENGLISH_ONLY.title);
+    });
+
+    it('reads the english (u.s.) home field from the keyword field route without a query', async () => {
+      const appId = await recordedUsEnglish();
+
+      const field = (await api.get(`/apps/${appId}/keyword-field`).expect(200))
+        .body as KeywordFieldResult;
+
+      expect(field.localization).toBe('en-US');
+    });
+
+    it('judges an english (u.s.) draft in germany', async () => {
+      const appId = await recordedUsEnglish();
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords: ['podcast'], country: 'de' })
+        .expect(201);
+
+      const preview = (
+        await api
+          .post(`/apps/${appId}/metadata/coverage-preview`)
+          .send({ localization: 'en-US', title: 'Podcast Player' })
+          .expect(200)
+      ).body as CoveragePreviewResult;
+
+      expect(preview.markets).toContain('de');
+    });
+  });
+
+  describe('a home listing in a language its storefront does not read', () => {
+    it('records polish as the home localization of a polish only app in germany', async () => {
+      registry.listings.set('de:default', POLISH_MYTHS);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
+      const items = await localizationItems(appId);
+      expect(items[0]).toMatchObject({
+        localization: 'pl',
+        origin: 'home',
+        readBy: [{ country: 'de', role: 'default', home: true }],
+      });
+      expect(items.map((item) => item.localization)).not.toContain('de');
+    });
+
+    it('keeps a german function word that is a polish word in the seeds', async () => {
+      registry.listings.set('de:default', POLISH_MYTHS);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      const texts = (
+        (await api.get(`/apps/${appId}/keywords`).expect(200))
+          .body as TrackedKeywordItem[]
+      ).map((keyword) => keyword.text);
+      expect(texts.some((text) => text.split(' ').includes('mit'))).toBe(true);
+    });
+
+    it('asks the store for no localization to prove it', async () => {
+      registry.listings.set('de:default', POLISH_MYTHS);
+
+      await importFrom(DE_APP_URL);
+
+      expect(
+        registry.calls.filter(
+          (call) => call.country === 'de' && call.localization !== undefined,
+        ),
+      ).toEqual([]);
+    });
+
+    it('keeps the storefront default when the app declares only english', async () => {
+      registry.listings.set('de:default', {
+        ...POLISH_MYTHS,
+        languages: ['EN'],
+      });
+
+      const appId = await importFrom(DE_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      expect((await localizationItems(appId))[0].localization).toBe('de');
     });
   });
 });

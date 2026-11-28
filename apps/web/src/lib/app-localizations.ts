@@ -186,6 +186,16 @@ export function openLocalization(
   );
 }
 
+export function unlistedHome(
+  result: Pick<AppLocalizationsResult, "home" | "localizations">,
+): AppStoreLocalization | null {
+  const home = result.localizations.find((item) => item.origin === "home");
+  return home &&
+    !keywordFieldLocalizations(result.home).includes(home.localization)
+    ? home.localization
+    : null;
+}
+
 export interface KeywordFieldDraft {
   phrases: string[];
   used: number;

@@ -7,8 +7,12 @@ import {
   homeDefaultCandidates,
   type LocalizationProbe,
   provenHomeDefault,
+  SHARED_SCRIPT_LANGUAGES,
   suspectedHomeDefault,
+  unreadHomeDefault,
 } from './home-default';
+import type { ConsoleListing } from './console-listing';
+import { descriptionFingerprint } from './description-fingerprint';
 
 const POLISH_DESCRIPTION =
   'Dzienniczek to aplikacja dla uczniów i rodziców. Sprawdzaj oceny, frekwencję i plan lekcji w jednym miejscu. Otrzymuj powiadomienia o nowych ocenach oraz wiadomościach od nauczycieli. Aplikacja działa z dziennikiem szkolnym i jest dostępna dla każdej szkoły, która korzysta z systemu. Wszystkie dane są bezpieczne, a logowanie jest proste i szybkie. Możesz też dodać kilka kont i przełączać się między nimi bez wylogowania.';
@@ -63,18 +67,59 @@ const JAPANESE_AND_ENGLISH_DESCRIPTION = `この日記アプリで成績と時�
 
 const CHINESE_AND_ENGLISH_DESCRIPTION = `这是一款为学生和家长设计的日记应用，可以查看成绩和课程表。老师发来的新消息也会马上通知你。 ${ENGLISH_DESCRIPTION}`;
 
+const RUSSIAN_DESCRIPTION =
+  'Дневник это приложение для учеников и родителей. Смотрите оценки, посещаемость и расписание уроков в одном месте. Получайте уведомления о новых оценках и сообщениях от учителей. Приложение работает со школьным журналом и доступно для каждой школы, которая пользуется системой. Все ваши данные в безопасности, а вход простой и быстрый.';
+
+const BULGARIAN_DESCRIPTION =
+  'Това приложение помага на учениците и родителите да виждат всички оценки, присъствия и разписанието на едно място. Получавате известия за нови оценки и съобщения от учителите. Приложението работи с училищния дневник и е достъпно за всяко училище, което използва системата. Всичките ви данни са в безопасност, а влизането е лесно и бързо.';
+
+const MALAY_DESCRIPTION =
+  'Aplikasi ini membantu pelajar dan ibu bapa melihat semua markah, kehadiran dan jadual waktu di satu tempat. Anda akan menerima pemberitahuan tentang markah baharu dan mesej daripada guru. Aplikasi ini berfungsi dengan daftar sekolah dan tersedia untuk setiap sekolah yang menggunakan sistem ini. Semua data anda selamat dan log masuk adalah mudah dan pantas. Anda juga boleh menambah lebih daripada satu akaun dan bertukar antara akaun pada bila-bila masa.';
+
+const NORWEGIAN_DESCRIPTION =
+  'Hva blir neste? Etter hver økt får du mer innsikt uten reklame. Noen ganger blir det bare én økt før frokost, men hver økt teller. Både nybegynnere og eksperter trener mot nye mål gjennom hele året, fordi hver dag blir litt bedre enn før. Appen har blitt brukt av mange, og hvilken økt du velger etter jobb er helt opp til deg. Ingen abonnement, bare trening slik du vil ha det, nå og senere.';
+
+const NORWEGIAN_NEAR_DANISH_DESCRIPTION =
+  'Appen er til alle som vil træne med musik. Du kan se alle dine resultater og dele dem med venner. Der er ingen reklame, og det er gratis for alle. Når du har trænet, kan du se hvor langt du er nået, og hvem der er med. Ikke mere ventetid, bare træning.';
+
+const KOREAN_DESCRIPTION =
+  '이 앱은 학생과 부모가 모든 성적, 출석, 시간표를 한곳에서 볼 수 있도록 도와줍니다. 새로운 성적과 선생님의 메시지에 대한 알림을 받을 수 있습니다. 앱은 학교 기록부와 함께 작동하며 이 시스템을 사용하는 모든 학교에서 이용할 수 있습니다. 모든 데이터는 안전하며 로그인은 간단하고 빠릅니다.';
+
+const JAPANESE_DESCRIPTION =
+  'この日記アプリは生徒と保護者のためのアプリです。成績、出席、時間割をひとつの場所で確認できます。新しい成績や先生からのメッセージの通知を受け取れます。アプリは学校の記録と連携し、このシステムを使うすべての学校で利用できます。データはすべて安全で、ログインも簡単です。';
+
+const PORTUGUESE_DESCRIPTION =
+  'O diário é um aplicativo para os alunos e os seus pais. Veja as notas, a frequência e o horário das aulas em um só lugar. Receba um aviso das novas notas e das mensagens dos professores. O aplicativo funciona com o registro da escola e está aberto a cada escola que usa o sistema. Todos os seus dados estão seguros e o acesso é simples e rápido.';
+
+const ARABIC_DESCRIPTION =
+  'هذا التطبيق يساعد الطلاب وأولياء الأمور على رؤية جميع الدرجات والحضور والجدول في مكان واحد. ستتلقى إشعارات بالدرجات الجديدة ورسائل المعلمين. يعمل التطبيق مع سجل المدرسة وهو متاح لكل مدرسة تستخدم النظام. جميع بياناتك آمنة وتسجيل الدخول سهل وسريع.';
+
+const HINDI_DESCRIPTION =
+  'यह ऐप छात्रों और माता-पिता को एक ही जगह पर सभी अंक, उपस्थिति और समय सारणी देखने में मदद करता है। आपको नए अंकों और शिक्षकों के संदेशों की सूचना मिलती है। यह ऐप स्कूल के रजिस्टर के साथ काम करता है और हर उस स्कूल के लिए उपलब्ध है जो इस प्रणाली का उपयोग करता है। आपका सारा डेटा सुरक्षित है और लॉग इन करना आसान और तेज़ है।';
+
+const POLISH_WITH_KANA_DESCRIPTION = `${POLISH_DESCRIPTION} 日記アプリで成績と時間割を確認できます。先生からの新しいお知らせもすぐに届きます。`;
+
+const POLISH_AND_GERMAN_DESCRIPTION = `${POLISH_DESCRIPTION} ${LONG_GERMAN_DESCRIPTION} ${GERMAN_DESCRIPTION}`;
+
 const echoed = (...tags: AppStoreLocalization[]): LocalizationProbe[] =>
   tags.map((localization) => ({ localization, echoed: true }));
 
 interface Proof {
   home: string;
   description: string;
-  probes?: LocalizationProbe[];
-  declared?: string[];
+  probes?: readonly LocalizationProbe[];
+  declared?: readonly string[];
+  consoleListing?: ConsoleListing | null;
 }
 
-const proof = ({ home, description, probes = [], declared = [] }: Proof) =>
-  provenHomeDefault({ home, description, probes, declared });
+const proof = ({
+  home,
+  description,
+  probes = [],
+  declared = [],
+  consoleListing = null,
+}: Proof) =>
+  provenHomeDefault({ home, description, probes, declared, consoleListing });
 
 describe('provenHomeDefault', () => {
   it('proves a polish default listing in poland', () => {
@@ -442,14 +487,14 @@ describe('provenHomeDefault in a storefront whose default is not english', () =>
       null,
     ],
     [
-      'never proves a language the storefront does not read',
+      'proves a language the storefront does not read from the text alone',
       {
         home: 'de',
         description: POLISH_DESCRIPTION,
         probes: echoed('en-GB'),
         declared: ['PL'],
       },
-      null,
+      'pl',
     ],
     [
       'never decides on an empty description',
@@ -545,5 +590,329 @@ describe('suspectedHomeDefault', () => {
         declared: ['HU'],
       }),
     ).toBeNull();
+  });
+});
+
+describe('a language the home storefront does not read', () => {
+  it.each([
+    {
+      label: 'polish in de declared PL',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['PL'],
+      expected: 'pl',
+    },
+    {
+      label: 'polish in de declared PL, EN',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['PL', 'EN'],
+      expected: 'pl',
+    },
+    {
+      label: 'polish in de declared PL, EN, DE',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['PL', 'EN', 'DE'],
+      expected: null,
+    },
+    {
+      label: 'slovak in de declared CS, SK',
+      home: 'de',
+      description: SLOVAK_DESCRIPTION,
+      declared: ['CS', 'SK'],
+      expected: null,
+    },
+    {
+      label: 'malay in de declared ID, MS',
+      home: 'de',
+      description: MALAY_DESCRIPTION,
+      declared: ['ID', 'MS'],
+      expected: null,
+    },
+    {
+      label: 'bulgarian in de declared RU, BG',
+      home: 'de',
+      description: BULGARIAN_DESCRIPTION,
+      declared: ['RU', 'BG'],
+      expected: null,
+    },
+    {
+      label: 'norwegian within a hit of danish in de declared NO',
+      home: 'de',
+      description: NORWEGIAN_NEAR_DANISH_DESCRIPTION,
+      declared: ['NO'],
+      expected: null,
+    },
+    {
+      label: 'norwegian in de declared NB',
+      home: 'de',
+      description: NORWEGIAN_DESCRIPTION,
+      declared: ['NB'],
+      expected: 'no',
+    },
+    {
+      label: 'polish in de declared EN',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: ['EN'],
+      expected: null,
+    },
+    {
+      label: 'polish in de declared nothing',
+      home: 'de',
+      description: POLISH_DESCRIPTION,
+      declared: [],
+      expected: null,
+    },
+    {
+      label: 'polish under twice the german in de declared PL, DE',
+      home: 'de',
+      description: POLISH_AND_GERMAN_DESCRIPTION,
+      declared: ['PL', 'DE'],
+      expected: null,
+    },
+    {
+      label: 'russian in fr declared RU',
+      home: 'fr',
+      description: RUSSIAN_DESCRIPTION,
+      declared: ['RU'],
+      expected: 'ru',
+    },
+    {
+      label: 'ukrainian in fr declared UK',
+      home: 'fr',
+      description: UKRAINIAN_DESCRIPTION,
+      declared: ['UK'],
+      expected: 'uk',
+    },
+    {
+      label: 'korean in de declared KO',
+      home: 'de',
+      description: KOREAN_DESCRIPTION,
+      declared: ['KO'],
+      expected: 'ko',
+    },
+    {
+      label: 'japanese in de declared JA',
+      home: 'de',
+      description: JAPANESE_DESCRIPTION,
+      declared: ['JA'],
+      expected: 'ja',
+    },
+    {
+      label: 'chinese in de declared ZH',
+      home: 'de',
+      description: CHINESE_DESCRIPTION,
+      declared: ['ZH'],
+      expected: null,
+    },
+    {
+      label: 'spanish in de declared ES',
+      home: 'de',
+      description: SPANISH_DESCRIPTION,
+      declared: ['ES'],
+      expected: null,
+    },
+    {
+      label: 'french in de declared FR',
+      home: 'de',
+      description: FRENCH_DESCRIPTION,
+      declared: ['FR'],
+      expected: null,
+    },
+    {
+      label: 'portuguese in de declared PT',
+      home: 'de',
+      description: PORTUGUESE_DESCRIPTION,
+      declared: ['PT'],
+      expected: null,
+    },
+    {
+      label: 'arabic in de declared AR',
+      home: 'de',
+      description: ARABIC_DESCRIPTION,
+      declared: ['AR'],
+      expected: null,
+    },
+    {
+      label: 'hindi in de declared HI',
+      home: 'de',
+      description: HINDI_DESCRIPTION,
+      declared: ['HI'],
+      expected: null,
+    },
+    {
+      label: 'polish with kana in jp declared PL',
+      home: 'jp',
+      description: POLISH_WITH_KANA_DESCRIPTION,
+      declared: ['PL'],
+      expected: null,
+    },
+    {
+      label: 'german in us declared DE',
+      home: 'us',
+      description: LONG_GERMAN_DESCRIPTION,
+      declared: ['DE'],
+      expected: 'de',
+    },
+    {
+      label: 'catalan in es declared CA',
+      home: 'es',
+      description: CATALAN_DESCRIPTION,
+      declared: ['CA'],
+      expected: null,
+    },
+  ])(
+    '$label answers $expected',
+    ({ home, description, declared, expected }) => {
+      expect(proof({ home, description, declared: [...declared] })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it('still proves polish in poland through the echo of its probe', () => {
+    expect(
+      proof({
+        home: 'pl',
+        description: POLISH_DESCRIPTION,
+        probes: echoed('pl'),
+        declared: ['PL'],
+      }),
+    ).toBe('pl');
+    expect(
+      unreadHomeDefault({
+        home: 'pl',
+        description: POLISH_DESCRIPTION,
+        declared: ['PL'],
+      }),
+    ).toBeNull();
+  });
+
+  it('pins the languages whose script another app store language shares', () => {
+    expect([...SHARED_SCRIPT_LANGUAGES]).toEqual(['ar', 'hi']);
+  });
+});
+
+describe('the console proof', () => {
+  const OTHER = 'Organise your family week, chores and rota in one place.';
+
+  const listing = (
+    matching: AppStoreLocalization[],
+    primary: AppStoreLocalization | null,
+    description = ENGLISH_DESCRIPTION,
+    others: AppStoreLocalization[] = [],
+  ): ConsoleListing => ({
+    version: '1.9',
+    primary,
+    fingerprints: new Map([
+      ...matching.map(
+        (tag) => [tag, descriptionFingerprint(description)] as const,
+      ),
+      ...others.map((tag) => [tag, descriptionFingerprint(OTHER)] as const),
+    ]),
+  });
+
+  it.each([
+    [
+      'names the one matching localization',
+      {
+        home: 'de',
+        consoleListing: listing(['en-US'], 'en-US', ENGLISH_DESCRIPTION, [
+          'en-GB',
+        ]),
+      },
+      'en-US',
+    ],
+    [
+      'wins over the listed suspect and its echo',
+      {
+        home: 'de',
+        probes: echoed('en-GB'),
+        declared: ['EN'],
+        consoleListing: listing(['en-US'], 'en-US'),
+      },
+      'en-US',
+    ],
+    [
+      'takes the tag the storefront reads on a tie',
+      { home: 'de', consoleListing: listing(['en-US', 'en-GB'], 'en-US') },
+      'en-GB',
+    ],
+    [
+      'takes the primary on a tie the storefront does not read',
+      { home: 'de', consoleListing: listing(['en-US', 'en-AU'], 'en-AU') },
+      'en-AU',
+    ],
+    [
+      'falls through on a tie without the primary',
+      { home: 'de', consoleListing: listing(['en-US', 'en-AU'], 'fr-CA') },
+      null,
+    ],
+    [
+      'falls through on a tie without a primary',
+      { home: 'de', consoleListing: listing(['en-US', 'en-AU'], null) },
+      null,
+    ],
+    [
+      'keeps the column null for the storefront primary',
+      { home: 'de', consoleListing: listing(['de'], 'en-US') },
+      null,
+    ],
+    [
+      'falls through without a match',
+      {
+        home: 'de',
+        consoleListing: listing([], 'en-US', ENGLISH_DESCRIPTION, ['en-US']),
+      },
+      null,
+    ],
+  ] as const)('%s', (_case, input, expected) => {
+    expect(proof({ description: ENGLISH_DESCRIPTION, ...input })).toBe(
+      expected,
+    );
+  });
+
+  it('falls through to the public proof without a match', () => {
+    expect(
+      proof({
+        home: 'de',
+        description: ENGLISH_DESCRIPTION,
+        probes: echoed('en-GB'),
+        declared: ['EN'],
+        consoleListing: listing([], 'en-US', ENGLISH_DESCRIPTION, ['en-US']),
+      }),
+    ).toBe('en-GB');
+  });
+
+  it('names a polish localization in germany and in poland', () => {
+    const polish = listing(['pl'], 'pl', POLISH_DESCRIPTION);
+
+    expect(
+      proof({
+        home: 'de',
+        description: POLISH_DESCRIPTION,
+        consoleListing: polish,
+      }),
+    ).toBe('pl');
+    expect(
+      proof({
+        home: 'pl',
+        description: POLISH_DESCRIPTION,
+        consoleListing: polish,
+      }),
+    ).toBe('pl');
+  });
+
+  it('answers what the public proof answers without a console listing', () => {
+    expect(
+      proof({
+        home: 'de',
+        description: ENGLISH_DESCRIPTION,
+        probes: echoed('en-GB'),
+        declared: ['EN'],
+      }),
+    ).toBe('en-GB');
   });
 });

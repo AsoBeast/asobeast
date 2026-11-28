@@ -250,6 +250,26 @@ describe('defaultLocalizationIn', () => {
       ),
     ).toBe('en-GB');
   });
+
+  it('answers a recorded app store localization its home storefront does not list in the home market only', () => {
+    const app = { country: 'de', defaultLocalization: 'en-US' };
+
+    expect(defaultLocalizationIn(app, 'de')).toBe('en-US');
+    expect(defaultLocalizationIn(app, 'fr')).toBe('fr');
+    expect(defaultLocalizationIn(app, 'at')).toBe('de');
+    expect(
+      defaultLocalizationIn({ country: 'de', defaultLocalization: 'pl' }, 'de'),
+    ).toBe('pl');
+  });
+
+  it('ignores a recorded tag outside the app store localizations', () => {
+    expect(
+      defaultLocalizationIn(
+        { country: 'de', defaultLocalization: 'xx-YY' },
+        'de',
+      ),
+    ).toBe('de');
+  });
 });
 
 describe('localizationReadOrder', () => {
@@ -264,5 +284,14 @@ describe('localizationReadOrder', () => {
     expect(
       localizationReadOrder({ country: 'pl', defaultLocalization: 'pl' }, 'be'),
     ).toEqual(keywordFieldLocalizations('be'));
+  });
+
+  it('reads a home localization its storefront does not list first, then the storefront list', () => {
+    const app = { country: 'de', defaultLocalization: 'en-US' };
+
+    expect(localizationReadOrder(app, 'de')).toEqual(['en-US', 'de', 'en-GB']);
+    expect(localizationReadOrder(app, 'gb')).toEqual(
+      keywordFieldLocalizations('gb'),
+    );
   });
 });

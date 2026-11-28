@@ -7,8 +7,8 @@ import {
   type DefaultingListing,
   defaultLocalizationIn,
   KeywordFieldQuery,
-  keywordFieldLocalizations,
 } from '@asobeast/shared';
+import { readsKeywordField, storefrontReads } from './localization-markets';
 
 export interface KeywordFieldTarget {
   country: string;
@@ -23,13 +23,15 @@ export function keywordFieldTarget(
   if (country !== app.country) {
     assertStorefront(app.store, country);
   }
-  const read = keywordFieldLocalizations(country);
   const localization =
     query.localization ?? defaultLocalizationIn(app, country);
-  if (!read.includes(localization)) {
+  if (!readsKeywordField(app, country, localization)) {
     throw new BadRequestException(
-      `The ${country.toUpperCase()} storefront reads ${read
-        .map((tag) => APP_STORE_LOCALIZATIONS[tag])
+      `The ${country.toUpperCase()} storefront reads ${storefrontReads(
+        app,
+        country,
+      )
+        .map((read) => APP_STORE_LOCALIZATIONS[read.localization])
         .join(', ')}, not ${APP_STORE_LOCALIZATIONS[localization]}`,
     );
   }

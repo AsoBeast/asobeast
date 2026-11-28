@@ -4196,6 +4196,7 @@ benchmarkOwner(
 export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
 export const APP_PL_NATIVE_ID = "app-pl-native";
 export const APP_DE_ENGLISH_ID = "app-de-english";
+export const APP_DE_US_ENGLISH_ID = "app-de-us-english";
 
 DATASETS[APP_DRAFT_LOCALES_ID] = localesDataset(
   APP_DRAFT_LOCALES_ID,
@@ -4212,6 +4213,16 @@ const deEnglish = localesDataset(APP_DE_ENGLISH_ID, "Overcast Lab");
 DATASETS[APP_DE_ENGLISH_ID] = {
   ...deEnglish,
   detail: { ...deEnglish.detail, country: "de", defaultLocalization: "en-GB" },
+};
+
+const deUsEnglish = localesDataset(APP_DE_US_ENGLISH_ID, "Family Lab");
+DATASETS[APP_DE_US_ENGLISH_ID] = {
+  ...deUsEnglish,
+  detail: {
+    ...deUsEnglish.detail,
+    country: "de",
+    defaultLocalization: "en-US",
+  },
 };
 
 export const APP_TARGETS_ID = "app-targets";
@@ -6495,6 +6506,9 @@ export const INITIAL_LOCALIZATION_SEEDS: Record<string, LocalizationSeed> = {
       "es-MX": ["temporizador", "enfoque"],
     },
   },
+  [APP_DE_US_ENGLISH_ID]: {
+    shipped: [{ localization: "en-GB", origin: "detected" }],
+  },
 };
 
 export const METADATA_AUDIT_PL_LOCALIZED: MetadataAuditResult = {
@@ -6571,6 +6585,7 @@ METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_DRAFT_LOCALES_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_PL_NATIVE_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_DE_ENGLISH_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_DE_US_ENGLISH_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_TARGETS_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_TARGETS_FOCUS_ID] = METADATA_AUDIT;
 

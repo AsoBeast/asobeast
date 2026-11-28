@@ -1,11 +1,13 @@
 import { slotsAfterUntrack } from './listing-target-cleanup';
 
+const app = { country: 'us', defaultLocalization: null };
+
 describe('slotsAfterUntrack', () => {
   it('empties the slot of a phrase no reader market still tracks', () => {
     expect(
       slotsAfterUntrack(
         ['habit', 'focus'],
-        'en-US',
+        { app, localization: 'en-US' },
         [{ text: 'habit', country: 'us' }],
         [],
       ),
@@ -16,7 +18,7 @@ describe('slotsAfterUntrack', () => {
     expect(
       slotsAfterUntrack(
         ['habit'],
-        'en-GB',
+        { app, localization: 'en-GB' },
         [{ text: 'habit', country: 'au' }],
         [{ text: 'habit', country: 'gb' }],
       ),
@@ -27,7 +29,7 @@ describe('slotsAfterUntrack', () => {
     expect(
       slotsAfterUntrack(
         ['habit'],
-        'en-GB',
+        { app, localization: 'en-GB' },
         [{ text: 'habit', country: 'gb' }],
         [{ text: 'habit', country: 'us' }],
       ),
@@ -38,7 +40,7 @@ describe('slotsAfterUntrack', () => {
     expect(
       slotsAfterUntrack(
         ['habit'],
-        'ja',
+        { app, localization: 'ja' },
         [{ text: 'habit', country: 'us' }],
         [],
       ),
@@ -49,7 +51,7 @@ describe('slotsAfterUntrack', () => {
     expect(
       slotsAfterUntrack(
         ['a', 'b', 'c'],
-        'en-US',
+        { app, localization: 'en-US' },
         [{ text: 'b', country: 'us' }],
         [],
       ),
@@ -60,11 +62,25 @@ describe('slotsAfterUntrack', () => {
     expect(
       slotsAfterUntrack(
         ['a', '', 'b'],
-        'en-US',
+        { app, localization: 'en-US' },
         [
           { text: 'a', country: 'us' },
           { text: 'b', country: 'us' },
         ],
+        [],
+      ),
+    ).toEqual([]);
+  });
+
+  it('empties the slot of a home localization its storefront does not list after an untrack at home', () => {
+    expect(
+      slotsAfterUntrack(
+        ['podcast'],
+        {
+          app: { country: 'de', defaultLocalization: 'en-US' },
+          localization: 'en-US',
+        },
+        [{ text: 'podcast', country: 'de' }],
         [],
       ),
     ).toEqual([]);

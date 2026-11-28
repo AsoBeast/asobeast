@@ -7,15 +7,16 @@ import {
 import { Store } from '@prisma/client';
 import {
   AppStoreLocalization,
+  DefaultingListing,
   LintContext,
   MetadataAssistantResult,
   MetadataAssistantStatus,
   MetadataField,
-  storefrontsReading,
   tokenize,
 } from '@asobeast/shared';
 import { AiGateway } from '../ai/ai-gateway.service';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
+import { readersOf } from '../keywords/localization-markets';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantDto } from './dto/metadata-assistant.dto';
@@ -151,7 +152,7 @@ export class MetadataAssistantService {
   }
 
   private async localizationTarget(
-    app: { id: string; store: Store },
+    app: { id: string; store: Store } & DefaultingListing,
     localization?: AppStoreLocalization,
   ): Promise<LocalizationTarget | undefined> {
     if (!localization) {
@@ -168,10 +169,11 @@ export class MetadataAssistantService {
     ]);
     return {
       localization,
-      storefronts: storefrontsReading(
+      storefronts: readersOf(
+        app,
         localization,
         markets.map((market) => market.country),
-      ),
+      ).map(({ country }) => country),
       keywordField: keywordFieldOf(fieldPhrases(stored), localization),
     };
   }
@@ -180,11 +182,18 @@ export class MetadataAssistantService {
     id: string;
     store: Store;
     country: string;
+    defaultLocalization: string | null;
     name: string | null;
   }> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, country: true, name: true },
+      select: {
+        id: true,
+        store: true,
+        country: true,
+        defaultLocalization: true,
+        name: true,
+      },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);

@@ -28,6 +28,7 @@ import {
   localizationMatrix,
   localizationsSectionHref,
   ownsKeywordFields,
+  unlistedHome,
   suggestedHint,
   openLocalization,
   readingStorefrontNames,
@@ -810,5 +811,29 @@ describe("firstImportPollInterval", () => {
     expect(firstImportPollInterval(result("available", null), 0)).toBe(false);
     expect(firstImportPollInterval(result("paused", null), 0)).toBe(false);
     expect(firstImportPollInterval(undefined, 0)).toBe(false);
+  });
+});
+
+describe("unlistedHome", () => {
+  const homeIn = (home: string, localization: AppStoreLocalization) => ({
+    home,
+    localizations: [item(localization, "home", [])],
+  });
+
+  it.each([
+    ["de", "en-US", "en-US"],
+    ["de", "pl", "pl"],
+    ["de", "en-GB", null],
+    ["pl", "pl", null],
+    ["zz", "en-GB", null],
+  ] as const)(
+    "names a %s home localization %s the storefront does not list: %s",
+    (home, localization, expected) => {
+      expect(unlistedHome(homeIn(home, localization))).toBe(expected);
+    },
+  );
+
+  it("names nothing without a home item", () => {
+    expect(unlistedHome({ home: "de", localizations: [] })).toBeNull();
   });
 });
