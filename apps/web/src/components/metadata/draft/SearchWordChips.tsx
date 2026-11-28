@@ -1,3 +1,4 @@
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import type { SearchWord } from "@/lib/store-preview/search-words";
 
 const SHOWN_WORDS = 60;
@@ -16,12 +17,12 @@ export function SearchWordChips({
       aria-label={label}
       className="flex list-none flex-wrap items-center gap-1 p-0"
     >
-      {words.slice(0, SHOWN_WORDS).map(({ word, repeat }) => (
+      {words.slice(0, SHOWN_WORDS).map(({ word, readFrom }) => (
         <li
           key={word}
           title={
-            repeat
-              ? `Search reads “${word}” once, so this use adds nothing`
+            readFrom
+              ? `Search already reads “${word}” from the ${METADATA_FIELD_LABELS[readFrom].toLowerCase()}`
               : undefined
           }
           className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-sm border border-border bg-muted px-1.5 text-caption"
@@ -29,7 +30,7 @@ export function SearchWordChips({
           <span dir="auto" className="min-w-0 wrap-anywhere">
             {word}
           </span>
-          {repeat ? (
+          {readFrom ? (
             <span className="shrink-0 text-warning">repeat</span>
           ) : null}
         </li>

@@ -114,20 +114,48 @@ test("counts characters the way the store does", async ({ page }) => {
   await expect(title).toHaveAttribute("aria-invalid", "true");
 });
 
-test("resets the draft to the live listing", async ({ page }) => {
+test("resets the draft to the live listing and undoes the reset", async ({
+  page,
+}) => {
   await page.goto("/apps/app-1/metadata?mode=draft");
   const reset = editor(page).getByRole("button", {
     name: "Reset to live listing",
   });
-  await expect(reset).toHaveAttribute("aria-disabled", "true");
-  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
-  await expect(reset).not.toHaveAttribute("aria-disabled", "true");
+  const copy = editor(page).getByRole("button", {
+    name: "Copy for App Store Connect",
+  });
+  await expect(reset).toHaveCount(0);
+  await expect(
+    editor(page).getByText("Matches the live listing"),
+  ).toBeVisible();
 
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+  await expect(editor(page).getByText("1 field changed")).toBeVisible();
   await reset.click();
 
   await expect(field(page, "Title")).toHaveValue("Focus Timer");
-  await expect(reset).toBeFocused();
-  await expect(reset).toHaveAttribute("aria-disabled", "true");
+  await expect(copy).toBeFocused();
+  await expect(reset).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(field(page, "Title")).toHaveValue("Habit Tracker");
+});
+
+test("shows the live value under a changed field and reverts it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const revert = editor(page).getByRole("button", {
+    name: "Revert title to the live listing",
+  });
+  await expect(revert).toHaveCount(0);
+
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+  await expect(editor(page).getByTitle("Focus Timer")).toBeVisible();
+  await revert.click();
+
+  await expect(field(page, "Title")).toHaveValue("Focus Timer");
+  await expect(field(page, "Title")).toBeFocused();
+  await expect(revert).toHaveCount(0);
 });
 
 test("shows short description and no subtitle or keyword field on Google Play", async ({
@@ -517,7 +545,10 @@ test.describe("the keyword field hand off", () => {
     );
     await expect(
       editor(page).getByRole("button", { name: "Reset to live listing" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    ).toHaveCount(0);
+    await expect(
+      editor(page).getByText("Matches the live listing"),
+    ).toBeVisible();
   });
 
   test("keeps the drafted field read only until it is known who manages it", async ({
@@ -641,7 +672,7 @@ test("shows the words search reads and marks a repeat", async ({ page }) => {
     "habitrepeat",
   );
   await expect(words("title").getByRole("listitem").first()).toHaveText(
-    "habitrepeat",
+    "habit",
   );
   await expect(words("keyword field")).toBeVisible();
   await expect(words("promotional text")).toHaveCount(0);
@@ -676,5 +707,71 @@ test("lists the words the draft description repeats", async ({ page }) => {
   ).toHaveCount(1);
   await expect(
     density.getByRole("heading", { level: 3, name: "Word density" }),
+  ).toBeVisible();
+});
+
+test("folds repeated words into one line and removes them from the keyword field", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (
+    await hydrated(field(page, "Subtitle"))
+  ).fill("Study timer for deep work");
+
+  const keywordField = field(page, "Keyword field");
+  const lint = editor(page).locator('[data-rule="repeats-subtitle-word"]');
+  await expect(lint).toHaveCount(1);
+  await expect(lint).toContainText(
+    '"study", "timer", "deep", and "work" already appear in the subtitle.',
+  );
+  await expect(lint).not.toContainText("repeats-subtitle-word");
+
+  await editor(page).getByRole("button", { name: "Remove repeats" }).click();
+
+  await expect(keywordField).toHaveValue("");
+  await expect(keywordField).toBeFocused();
+  await expect(page.getByText("Removed 4 repeated words")).toBeVisible();
+  await expect(page.getByText("21 characters freed")).toBeVisible();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(keywordField).toHaveValue("study timer,deep work");
+});
+
+test("keeps the verdict in view above the fields on a narrow screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (
+    await hydrated(field(page, "Subtitle"))
+  ).fill("Study timer for deep work");
+
+  const strip = page.getByRole("link", {
+    name: "The draft covers 1 of 3 tracked keywords, 1 fewer than the live listing. Go to Draft coverage",
+  });
+  await expect(strip).toBeVisible();
+  await strip.click();
+  await expect(panel(page)).toBeFocused();
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(strip).toBeHidden();
+});
+
+test("puts the live panels under one Live listing heading in draft mode", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const live = page.getByRole("region", { name: "Live listing" });
+  await expect(
+    live.getByRole("heading", { name: "Keyword coverage" }),
+  ).toBeVisible();
+
+  await (
+    await hydrated(modes(page).getByRole("tab", { name: "Live listing" }))
+  ).click();
+  await expect(page.getByRole("heading", { name: "Live listing" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("heading", { name: "Keyword coverage" }),
   ).toBeVisible();
 });

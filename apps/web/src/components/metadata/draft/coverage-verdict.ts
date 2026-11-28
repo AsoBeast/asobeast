@@ -1,4 +1,5 @@
 import type { CoveragePreviewResult } from "@asobeast/shared";
+import { formatNumber } from "@/lib/format";
 
 export interface CoverageVerdictFigures {
   total: number;
@@ -20,3 +21,15 @@ export function coverageVerdict({
 
 export const coverageShare = ({ draft, total }: CoverageVerdictFigures) =>
   (draft / total) * 100;
+
+export function verdictSentence({
+  total,
+  draft,
+  live,
+}: CoverageVerdictFigures): string {
+  const covers = `The draft covers ${formatNumber(draft)} of ${formatNumber(total)} tracked keywords`;
+  const change = draft - live;
+  if (change === 0) return `${covers}.`;
+  const way = change > 0 ? "more" : "fewer";
+  return `${covers}, ${formatNumber(Math.abs(change))} ${way} than the live listing.`;
+}

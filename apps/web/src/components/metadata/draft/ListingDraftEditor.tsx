@@ -1,36 +1,37 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
-import { ChevronRight, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { DefaultingListing, MetadataAuditResult } from "@asobeast/shared";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { StoreFieldNotice } from "@/components/localizations/KeywordFieldEditor";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   changedFields,
   draftFieldsOf,
   draftRequest,
   adoptHomeDraft,
   draftScopeOf,
+  fieldCount,
   liveDraftValues,
   scopeKey,
   type ListingDraftField,
 } from "@/lib/listing-draft";
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { searchWords } from "@/lib/store-preview/search-words";
-import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
+import { CopyFieldButton } from "./CopyDraftButtons";
 import type { DensityContext } from "../density/density-inputs";
 import { DescriptionDensity } from "../density/DescriptionDensity";
 import { TargetsBlock } from "../targets/TargetsBlock";
+import { coverageVerdict } from "./coverage-verdict";
+import { DescriptionFold } from "./DescriptionFold";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
-import { DraftFieldInput } from "./DraftFieldInput";
+import { DraftFieldInput, draftFieldSelector } from "./DraftFieldInput";
+import { DraftFieldsCard } from "./DraftFieldsCard";
 import { DraftStorePreview } from "./DraftStorePreview";
+import { DraftVerdictStrip } from "./DraftVerdict";
 import { KeywordFieldHandoff } from "./KeywordFieldHandoff";
+import { RemoveRepeatsButton } from "./RemoveRepeatsButton";
+import { undoToast } from "./undo-toast";
 import {
   useDraftKeywordField,
   type DraftKeywordField,
@@ -67,7 +68,6 @@ export function ListingDraftEditor({
   localization: string | undefined;
   density: DensityContext;
 }) {
-  const headingId = useId();
   const store = audit.store;
   const { country, defaultLocalization } = app;
   useEffect(() => {
@@ -102,33 +102,56 @@ export function ListingDraftEditor({
     useTargetedRequest(id, scope, request),
   );
   const answer = preview.requested ? preview.query.data : undefined;
-  const lint = answer?.fields;
   const current = !preview.settling && !preview.query.isPlaceholderData;
   const wasted = current ? (answer?.wastedWords ?? []) : [];
   const revealDescription = useDraftFieldReveal("description");
   const [descriptionOpen, setDescriptionOpen] = useState(revealDescription);
   if (revealDescription && !descriptionOpen) setDescriptionOpen(true);
-  const unchanged = changedFields(values, live).length === 0;
+  const changed = changedFields(values, live).length;
   const handsOff =
     field.handoff !== null &&
     !field.managed &&
     draft.changed.includes("keywordField");
   const fields = draftFieldsOf(store);
   const locked = field.managed || !field.settled;
+  const valueOf = (name: ListingDraftField) => values[name] ?? "";
+  const liveOf = (name: ListingDraftField) => live[name] ?? "";
+  const issuesOf = (name: ListingDraftField) =>
+    answer?.fields.find((entry) => entry.field === name)?.issues ?? [];
+
+  const revert = (name: ListingDraftField) => {
+    const before = valueOf(name);
+    draft.setField(name, liveOf(name));
+    document.querySelector<HTMLElement>(draftFieldSelector(name))?.focus();
+    undoToast(
+      `${METADATA_FIELD_LABELS[name]} reverted to the live listing`,
+      () => draft.setField(name, before),
+    );
+  };
 
   const input = (name: ListingDraftField) => (
     <DraftFieldInput
       key={name}
       store={store}
       field={name}
-      value={values[name] ?? ""}
+      value={valueOf(name)}
+      live={liveOf(name)}
       onChange={(value) => draft.setField(name, value)}
+      onRevert={() => revert(name)}
       readOnly={name === "keywordField" && locked}
-      action={<CopyFieldButton field={name} value={values[name] ?? ""} />}
-      issues={lint?.find((entry) => entry.field === name)?.issues ?? []}
-      words={searchWords(store, name, values[name] ?? "", wasted)}
+      hideLabel={name === "description"}
+      action={<CopyFieldButton field={name} value={valueOf(name)} />}
+      issues={issuesOf(name)}
+      words={searchWords(store, name, valueOf(name), wasted)}
     >
       {name === "keywordField" ? <KeywordFieldNotice field={field} /> : null}
+      {name === "keywordField" && !locked && current ? (
+        <RemoveRepeatsButton
+          value={valueOf(name)}
+          issues={issuesOf(name)}
+          onChange={(value) => draft.setField(name, value)}
+        />
+      ) : null}
       {name === "keywordField" && handsOff && field.handoff ? (
         <KeywordFieldHandoff localization={field.handoff} />
       ) : null}
@@ -152,43 +175,23 @@ export function ListingDraftEditor({
           localization={scope.localization}
         />
       ) : null}
-      <section
-        aria-labelledby={headingId}
-        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @4xl/metadata:col-span-7"
+      <DraftVerdictStrip verdict={answer ? coverageVerdict(answer) : null} />
+      <DraftFieldsCard
+        store={store}
+        values={values}
+        changed={changed}
+        onReset={draft.reset}
       >
-        <h2 id={headingId} className="sr-only">
-          Draft listing
-        </h2>
         {fields.filter((name) => name !== "description").map(input)}
-        <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="-ml-2 w-fit">
-              <ChevronRight
-                aria-hidden
-                className="transition-transform duration-150 ease-out data-[open=true]:rotate-90"
-                data-open={descriptionOpen}
-              />
-              <span>Description</span>
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2">
-            {input("description")}
-          </CollapsibleContent>
-        </Collapsible>
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-          <CopyDraftButton store={store} values={values} />
-          <Button
-            variant="outline"
-            aria-disabled={unchanged || undefined}
-            onClick={() => {
-              if (!unchanged) draft.reset();
-            }}
-          >
-            <RotateCcw aria-hidden />
-            <span>Reset to live listing</span>
-          </Button>
-        </div>
-      </section>
+        <DescriptionFold
+          open={descriptionOpen}
+          onOpenChange={setDescriptionOpen}
+          count={fieldCount(store, "description", valueOf("description")).text}
+          changed={valueOf("description") !== liveOf("description")}
+        >
+          {input("description")}
+        </DescriptionFold>
+      </DraftFieldsCard>
       <div className={DRAFT_RAIL}>
         <DraftCoveragePanel preview={preview} />
         <DraftStorePreview

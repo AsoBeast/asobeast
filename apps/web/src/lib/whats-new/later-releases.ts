@@ -11,7 +11,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Draft your next listing",
-        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, right beside the fields while you type, how many tracked keywords the draft covers against the live listing, which ones it would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
+        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, right beside the fields while you type, how many tracked keywords the draft covers against the live listing, which ones it would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Each changed field shows the live text under it with a Revert button, words repeated from the title or subtitle are named on one line and leave the keyword field with one press, and every reset can be undone. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
       },
       {
         kind: "new",
@@ -21,7 +21,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Target keywords for each language",
-        text: "At the top of a draft, pick what each App Store language should rank for: one keyword for the title, two for the subtitle and up to seven more, or press Use top 3. Picking a keyword you do not track yet starts tracking it in every country that reads that language, and the draft shows which targets it covers.",
+        text: "At the top of a draft, pick what each App Store language should rank for: one keyword for the title, two for the subtitle and up to seven more, or press Use top 3. Picking a keyword you do not track yet starts tracking it in every country that reads that language, and the draft shows which targets it covers. Saved targets fold into one line until you edit them.",
       },
       {
         kind: "new",

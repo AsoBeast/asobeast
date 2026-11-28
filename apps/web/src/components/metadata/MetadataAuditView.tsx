@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useId, type ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { defaultLocalizationIn } from "@asobeast/shared";
@@ -52,6 +52,32 @@ function NoKeywords({ id }: { id: string }) {
           />
         </CardContent>
       </Card>
+    </section>
+  );
+}
+
+function LiveListingGroup({
+  headed,
+  children,
+}: {
+  headed: boolean;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section
+      aria-labelledby={headed ? headingId : undefined}
+      className={cn(
+        "flex flex-col gap-6",
+        headed && "border-t border-border pt-6",
+      )}
+    >
+      {headed ? (
+        <h2 id={headingId} className="text-heading">
+          Live listing
+        </h2>
+      ) : null}
+      {children}
     </section>
   );
 }
@@ -154,48 +180,50 @@ export function MetadataAuditView({
         </div>
       )}
 
-      {tracked ? (
-        <CoverageTable
-          rows={result.coverage}
-          withScreenshotText={withScreenshotText}
-        />
-      ) : (
-        <NoKeywords id={id} />
-      )}
-
-      {keywordFields ? (
-        <AppLocalizationsSection
-          id={id}
-          canDraft={drafting}
-          suggestion={suggestion}
-          homeLocalization={homeLocalization}
-          ownerWhileLoading={ownerWhileLoading}
-        />
-      ) : suggestion ? (
-        <KeywordFieldSuggestionCard
-          id={id}
-          homeLocalization={homeLocalization}
-          suggestion={suggestion}
-        />
-      ) : null}
-
-      {drafting ? (
-        <MetadataAssistantPanel
-          appId={id}
-          store={result.store}
-          canLocalize={hasLocalizations}
-        />
-      ) : null}
-
-      {isAppStore ? (
-        <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
-          <ScreenshotCaptionsCard
-            id={id}
-            market={queryMarket(market, home)}
-            localization={localization}
+      <LiveListingGroup headed={draftMode}>
+        {tracked ? (
+          <CoverageTable
+            rows={result.coverage}
+            withScreenshotText={withScreenshotText}
           />
-        </Suspense>
-      ) : null}
+        ) : (
+          <NoKeywords id={id} />
+        )}
+
+        {keywordFields ? (
+          <AppLocalizationsSection
+            id={id}
+            canDraft={drafting}
+            suggestion={suggestion}
+            homeLocalization={homeLocalization}
+            ownerWhileLoading={ownerWhileLoading}
+          />
+        ) : suggestion ? (
+          <KeywordFieldSuggestionCard
+            id={id}
+            homeLocalization={homeLocalization}
+            suggestion={suggestion}
+          />
+        ) : null}
+
+        {drafting ? (
+          <MetadataAssistantPanel
+            appId={id}
+            store={result.store}
+            canLocalize={hasLocalizations}
+          />
+        ) : null}
+
+        {isAppStore ? (
+          <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
+            <ScreenshotCaptionsCard
+              id={id}
+              market={queryMarket(market, home)}
+              localization={localization}
+            />
+          </Suspense>
+        ) : null}
+      </LiveListingGroup>
     </>
   );
 }

@@ -12,15 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DeltaChip } from "@/components/ui/delta-chip";
-import { GradedNumber } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
-import { formatCountry, formatList, formatNumber } from "@/lib/format";
-import { grade } from "@/lib/grade";
+import { formatCountry, formatList } from "@/lib/format";
 import { marketNote, previewGroups, wasteReason } from "@/lib/listing-draft";
-import { coverageShare, coverageVerdict } from "./coverage-verdict";
+import { coverageVerdict } from "./coverage-verdict";
 import { DraftKeywordList } from "./DraftKeywordList";
 import { DraftTargetList } from "./DraftTargetList";
+import { DRAFT_COVERAGE_ID, VerdictFigures } from "./DraftVerdict";
 import type { CoveragePreview } from "./use-coverage-preview";
 
 const MISSING_SHOWN = 8;
@@ -74,28 +72,12 @@ function WastedWords({ result }: { result: CoveragePreviewResult }) {
 function VerdictLine({ result }: { result: CoveragePreviewResult }) {
   const verdict = coverageVerdict(result);
   if (!verdict) return null;
-  const change = verdict.draft - verdict.live;
   return (
     <p
       role="status"
       className="flex flex-wrap items-baseline gap-x-2 px-2 text-body"
     >
-      <span>Covers</span>
-      <GradedNumber
-        value={`${formatNumber(verdict.draft)} of ${formatNumber(verdict.total)}`}
-        grade={grade("coverage", coverageShare(verdict))}
-        label="The draft covers"
-        className="font-medium"
-      />
-      <span>tracked keywords</span>
-      {change === 0 ? null : (
-        <DeltaChip
-          value={change}
-          polarity="higher-is-better"
-          period={`from the ${formatNumber(verdict.live)} the live listing covers`}
-          className="self-center text-label"
-        />
-      )}
+      <VerdictFigures verdict={verdict} />
     </p>
   );
 }
@@ -184,7 +166,12 @@ export function DraftCoveragePanel({ preview }: { preview: CoveragePreview }) {
   const footer = judgedIn(result);
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0">
+    <section
+      id={DRAFT_COVERAGE_ID}
+      tabIndex={-1}
+      aria-labelledby={headingId}
+      className="min-w-0 scroll-mt-28 outline-none"
+    >
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>

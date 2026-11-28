@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import type { Store } from "@asobeast/shared";
@@ -41,16 +42,21 @@ export function CopyFieldButton({
 }
 
 export function CopyDraftButton({
+  ref,
   store,
   values,
+  primary,
 }: {
+  ref?: Ref<HTMLButtonElement>;
   store: Store;
   values: ListingDraftValues;
+  primary: boolean;
 }) {
   const consoleName = CONSOLE_NAMES[store];
   return (
     <Button
-      variant="outline"
+      ref={ref}
+      variant={primary ? "default" : "outline"}
       onClick={() =>
         void copyWithToast(
           consoleCopy(store, values),

@@ -22,7 +22,11 @@ export function useListingDraft(
   const values = useMemo(() => draftValues(stored, live), [stored, live]);
   const setField = (field: ListingDraftField, value: string) =>
     writeListingDraftField(appId, scope, field, value);
-  const reset = () => save("");
+  const reset = () => {
+    const before = raw ?? "";
+    save("");
+    return () => save(before);
+  };
   return {
     values,
     changed: changedFields(values, live),
