@@ -56,7 +56,7 @@ export function DraftVerdictStrip({
     <a
       href={`#${DRAFT_COVERAGE_ID}`}
       aria-label={`${verdictSentence(verdict)} Go to Draft coverage`}
-      className="sticky top-[60px] z-20 col-span-12 flex min-w-0 items-baseline gap-x-2 overflow-hidden whitespace-nowrap rounded-lg border border-border bg-popover px-3 py-2 text-dense shadow-overlay outline-none focus-visible:ring-2 focus-visible:ring-ring @4xl/metadata:hidden print:hidden"
+      className="sticky top-[60px] z-20 col-span-12 flex min-w-0 flex-wrap items-baseline gap-x-2 rounded-lg border border-border bg-popover px-3 py-2 text-dense shadow-overlay outline-none focus-visible:ring-2 focus-visible:ring-ring @4xl/metadata:hidden print:hidden"
     >
       <VerdictFigures verdict={verdict} />
     </a>

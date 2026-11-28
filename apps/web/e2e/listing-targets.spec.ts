@@ -1,5 +1,6 @@
 import type { Page, Request } from "@playwright/test";
 import { APP_TARGETS_ID } from "./fixtures.mts";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import {
   TARGETS_FULL_COOKIE,
@@ -623,4 +624,74 @@ test("keeps the header actions inside the card on a phone", async ({
   );
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   expect(tipRight).toBeLessThanOrEqual(right);
+});
+
+test("keeps focus on Apply suggestions when it restores the saved order", async ({
+  page,
+}) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+  await editTargets(page);
+
+  await slot(page, "Title")
+    .getByRole("button", { name: "Move productivity app down" })
+    .click();
+  await expect(saveButton(page)).toBeVisible();
+  const apply = block(page).getByRole("button", { name: "Apply suggestions" });
+  await apply.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "productivity app for Title",
+    }),
+  ).toBeVisible();
+  await expect(saveButton(page)).toHaveCount(0);
+  await expect(apply).toBeFocused();
+});
+
+test("hands focus to the first slot when a save leaves no target", async ({
+  page,
+}) => {
+  await seed(page, ["focus timer"]);
+  await page.goto(DRAFT);
+  await editTargets(page);
+
+  await slot(page, "Title")
+    .getByRole("button", { name: "Remove focus timer from Title" })
+    .click();
+  await saveButton(page).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText(/^Targets saved/)).toBeVisible();
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "Choose a keyword for Title",
+    }),
+  ).toBeFocused();
+});
+
+test("leaves focus where the viewer moved it while the targets save", async ({
+  page,
+}) => {
+  await seed(page, ["focus timer"]);
+  await page.goto(DRAFT);
+  await editTargets(page);
+  await openPicker(page, "Subtitle 1");
+  await page.keyboard.type("study timer");
+  await picker(page)
+    .getByRole("option", { name: /study timer/ })
+    .click();
+  const held = await holdRequest(page, TARGETS_PATH, "PUT");
+
+  await saveButton(page).click();
+  const title = page
+    .getByRole("region", { name: "Draft listing" })
+    .getByRole("textbox", { name: "Title", exact: true });
+  await title.focus();
+  held.release();
+
+  await expect(page.getByText(/^Targets saved/)).toBeVisible();
+  await expect(editButton(page)).toBeVisible();
+  await expect(title).toBeFocused();
 });

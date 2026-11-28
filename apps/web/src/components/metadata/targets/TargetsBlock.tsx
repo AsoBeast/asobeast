@@ -1,7 +1,11 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
-import type { AppStoreLocalization } from "@asobeast/shared";
+import { useEffect, useId, useRef, useState } from "react";
+import type {
+  AppStoreLocalization,
+  ListingTargetsResult,
+  ListingTargetsSaveResult,
+} from "@asobeast/shared";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +18,8 @@ import {
 import { InfoTip } from "@/components/ui/info-tip";
 import {
   armFocusHandoff,
+  focusIsLost,
+  useFocusAfterCommit,
   useFocusClaim,
   useFocusGroupClaim,
 } from "@/lib/focus-handoff";
@@ -33,7 +39,6 @@ import { useTargetEdits, type TargetEdits } from "./use-target-edits";
 
 const EDIT_FOCUS = "targets:edit";
 const OPEN_FOCUS = "targets:open";
-const SAVE_FOCUS = "targets:save";
 
 const DOC_LINK = "font-medium text-foreground link-underline";
 
@@ -64,15 +69,24 @@ function TargetsTip() {
   );
 }
 
+function needsEditor(
+  result: ListingTargetsResult,
+  outcome: ListingTargetsSaveResult | null,
+): boolean {
+  return (
+    !hasSavedTargets(result) ||
+    missingMarkets(result).length > 0 ||
+    (outcome !== null && notTrackedSentence(outcome.notTracked) !== null)
+  );
+}
+
 function holdsOpen(targets: TargetEdits): boolean {
   const result = targets.read.data;
-  if (!result || !hasSavedTargets(result)) return true;
+  if (!result) return true;
   return (
     targets.edited ||
     targets.error !== null ||
-    missingMarkets(result).length > 0 ||
-    (targets.outcome !== null &&
-      notTrackedSentence(targets.outcome.notTracked) !== null)
+    needsEditor(result, targets.outcome)
   );
 }
 
@@ -101,13 +115,34 @@ export function TargetsBlock({
   localization: AppStoreLocalization;
 }) {
   const headingId = useId();
+  const sectionRef = useRef<HTMLElement>(null);
+  const saveRef = useRef<HTMLButtonElement>(null);
+  const saveFocusPending = useRef(false);
+  const focusAfter = useFocusAfterCommit();
   const [open, setOpen] = useState(false);
+  const firstSlot = () =>
+    sectionRef.current?.querySelector<HTMLElement>("ul button") ?? null;
   const close = () => {
     armFocusHandoff(EDIT_FOCUS);
     setOpen(false);
   };
   const targets = useTargetEdits(id, localization, (saved) => {
-    if (notTrackedSentence(saved.notTracked) === null) close();
+    const active = document.activeElement;
+    const focusHere =
+      focusIsLost() || (sectionRef.current?.contains(active) ?? false);
+    if (needsEditor(saved, saved)) {
+      if (focusHere && active instanceof HTMLElement) {
+        focusAfter(firstSlot(), active);
+      }
+      return;
+    }
+    if (focusHere) armFocusHandoff(EDIT_FOCUS);
+    setOpen(false);
+  });
+  useEffect(() => {
+    if (!saveFocusPending.current) return;
+    saveFocusPending.current = false;
+    saveRef.current?.focus();
   });
   const [more, setMore] = useState<boolean | null>(null);
   const [moved, setMoved] = useState("");
@@ -120,16 +155,14 @@ export function TargetsBlock({
   const editing = open || held;
   const showMore =
     more ?? MORE_SLOTS.some((index) => targets.slots[index] !== null);
-  const saveRef = useRef<HTMLButtonElement | null>(null);
-  const claimSave = useFocusClaim(SAVE_FOCUS);
   const group = useFocusGroupClaim(OPEN_FOCUS, !editing);
-  const focusSave = () => {
-    if (saveRef.current) saveRef.current.focus();
-    else armFocusHandoff(SAVE_FOCUS);
-  };
 
   return (
-    <section aria-labelledby={headingId} className="col-span-12 min-w-0">
+    <section
+      ref={sectionRef}
+      aria-labelledby={headingId}
+      className="col-span-12 min-w-0"
+    >
       <Card>
         <CardHeader
           className={cn(PANEL_HEADER, "@max-lg/card-header:grid-cols-1")}
@@ -149,7 +182,9 @@ export function TargetsBlock({
                 result={result}
                 onEdit={targets.edit}
                 onApplied={setMoved}
-                onFocusSave={focusSave}
+                onFocusSave={() => {
+                  saveFocusPending.current = true;
+                }}
               />
             ) : null}
             <TargetsTip />
@@ -180,13 +215,8 @@ export function TargetsBlock({
           <TargetsFooter
             targets={targets}
             result={result}
-            saveRef={(node) => {
-              saveRef.current = node;
-              claimSave(node);
-            }}
-            firstSlot={() =>
-              group.current?.querySelector<HTMLElement>("button") ?? null
-            }
+            saveRef={saveRef}
+            firstSlot={firstSlot}
             onDone={held ? undefined : close}
           />
         ) : null}

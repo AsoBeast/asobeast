@@ -97,6 +97,14 @@ describe("removeRepeats", () => {
     });
   });
 
+  it("takes a repeated word out of a hyphenated part", () => {
+    expect(removeRepeats("Habit-Tracker,timer", new Set(["habit"]))).toEqual({
+      value: "Tracker,timer",
+      words: 1,
+      chars: 6,
+    });
+  });
+
   it("changes nothing without a repeat", () => {
     expect(removeRepeats("focus,timer", new Set())).toEqual({
       value: "focus,timer",

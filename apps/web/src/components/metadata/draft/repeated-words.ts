@@ -62,20 +62,33 @@ export interface RepeatRemoval {
   chars: number;
 }
 
+const WORD_SEPARATOR = /[^\p{L}\p{M}\p{N}]+/u;
+
+function withoutRepeats(
+  part: string,
+  repeated: ReadonlySet<string>,
+): { kept: string | null; removed: number } {
+  const segments = part.split(WORD_SEPARATOR).filter(Boolean);
+  const kept = segments.filter((segment) =>
+    tokenize(segment).some((token) => !repeated.has(token)),
+  );
+  const removed = segments.length - kept.length;
+  if (removed === 0) return { kept: part, removed };
+  return { kept: kept.length === 0 ? null : kept.join(" "), removed };
+}
+
 export function removeRepeats(
   keywordField: string,
   repeated: ReadonlySet<string>,
 ): RepeatRemoval {
   let words = 0;
-  const isRepeat = (word: string) => {
-    const tokens = tokenize(word);
-    return tokens.length > 0 && tokens.every((token) => repeated.has(token));
-  };
   const terms = keywordField.split(",").flatMap((term) => {
     const parts = term.trim().split(/\s+/).filter(Boolean);
-    const kept = parts.filter((part) => !isRepeat(part));
-    if (kept.length === parts.length) return [term];
-    words += parts.length - kept.length;
+    const results = parts.map((part) => withoutRepeats(part, repeated));
+    const removed = results.reduce((sum, result) => sum + result.removed, 0);
+    if (removed === 0) return [term];
+    words += removed;
+    const kept = results.flatMap((result) => result.kept ?? []);
     return kept.length === 0 ? [] : [kept.join(" ")];
   });
   const value = terms.join(",");
