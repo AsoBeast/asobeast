@@ -108,16 +108,18 @@ describe("slot edits", () => {
 
     expect(slotHolding(slots, "focus timer")).toBe(2);
     expect(slotHolding(slots, "habit")).toBeNull();
-    expect(slotLabel(slotHolding(slots, "focus timer") ?? 0)).toBe("Subtitle");
+    expect(slotLabel(slotHolding(slots, "focus timer") ?? 0)).toBe(
+      "Subtitle 2",
+    );
   });
 });
 
 describe("slotLabel", () => {
-  it("names the role slots and numbers the rest", () => {
+  it("names the role slots and numbers the subtitles and the rest", () => {
     expect([0, 1, 2, 3, 9].map(slotLabel)).toEqual([
       "Title",
-      "Subtitle",
-      "Subtitle",
+      "Subtitle 1",
+      "Subtitle 2",
       "Keyword 4",
       "Keyword 10",
     ]);

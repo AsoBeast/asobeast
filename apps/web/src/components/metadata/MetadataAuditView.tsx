@@ -1,9 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useId, type ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { defaultLocalizationIn } from "@asobeast/shared";
+import {
+  defaultLocalizationIn,
+  type AppStoreLocalization,
+  type KeywordFieldSuggestion,
+} from "@asobeast/shared";
 import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
@@ -52,6 +56,68 @@ function NoKeywords({ id }: { id: string }) {
           />
         </CardContent>
       </Card>
+    </section>
+  );
+}
+
+function KeywordFieldPanel({
+  id,
+  keywordFields,
+  canDraft,
+  suggestion,
+  homeLocalization,
+  ownerWhileLoading,
+}: {
+  id: string;
+  keywordFields: boolean;
+  canDraft: boolean;
+  suggestion: KeywordFieldSuggestion | null;
+  homeLocalization: AppStoreLocalization;
+  ownerWhileLoading: boolean;
+}) {
+  if (keywordFields) {
+    return (
+      <AppLocalizationsSection
+        id={id}
+        canDraft={canDraft}
+        suggestion={suggestion}
+        homeLocalization={homeLocalization}
+        ownerWhileLoading={ownerWhileLoading}
+      />
+    );
+  }
+  if (!suggestion) return null;
+  return (
+    <KeywordFieldSuggestionCard
+      id={id}
+      homeLocalization={homeLocalization}
+      suggestion={suggestion}
+    />
+  );
+}
+
+function LiveListingGroup({
+  headed,
+  children,
+}: {
+  headed: boolean;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section
+      aria-labelledby={headed ? headingId : undefined}
+      className={cn(
+        "flex flex-col gap-6",
+        headed && "border-t border-border pt-6",
+      )}
+    >
+      {headed ? (
+        <h2 id={headingId} className="text-heading">
+          Live listing
+        </h2>
+      ) : null}
+      {children}
     </section>
   );
 }
@@ -154,48 +220,43 @@ export function MetadataAuditView({
         </div>
       )}
 
-      {tracked ? (
-        <CoverageTable
-          rows={result.coverage}
-          withScreenshotText={withScreenshotText}
-        />
-      ) : (
-        <NoKeywords id={id} />
-      )}
+      <LiveListingGroup headed={draftMode}>
+        {tracked ? (
+          <CoverageTable
+            rows={result.coverage}
+            withScreenshotText={withScreenshotText}
+          />
+        ) : (
+          <NoKeywords id={id} />
+        )}
 
-      {keywordFields ? (
-        <AppLocalizationsSection
+        <KeywordFieldPanel
           id={id}
+          keywordFields={keywordFields}
           canDraft={drafting}
           suggestion={suggestion}
           homeLocalization={homeLocalization}
           ownerWhileLoading={ownerWhileLoading}
         />
-      ) : suggestion ? (
-        <KeywordFieldSuggestionCard
-          id={id}
-          homeLocalization={homeLocalization}
-          suggestion={suggestion}
-        />
-      ) : null}
 
-      {drafting ? (
-        <MetadataAssistantPanel
-          appId={id}
-          store={result.store}
-          canLocalize={hasLocalizations}
-        />
-      ) : null}
-
-      {isAppStore ? (
-        <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
-          <ScreenshotCaptionsCard
-            id={id}
-            market={queryMarket(market, home)}
-            localization={localization}
+        {drafting ? (
+          <MetadataAssistantPanel
+            appId={id}
+            store={result.store}
+            canLocalize={hasLocalizations}
           />
-        </Suspense>
-      ) : null}
+        ) : null}
+
+        {isAppStore ? (
+          <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
+            <ScreenshotCaptionsCard
+              id={id}
+              market={queryMarket(market, home)}
+              localization={localization}
+            />
+          </Suspense>
+        ) : null}
+      </LiveListingGroup>
     </>
   );
 }

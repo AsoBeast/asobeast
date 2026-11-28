@@ -8,6 +8,7 @@ import { formatNumber, pluralize } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
 import { appLocalizationsOptions, metadataAuditOptions } from "@/lib/queries";
 import { metadataStatus, type MetadataStatus } from "./metadata-status";
+import { useMetadataMode } from "./MetadataModeSwitch";
 import { useShowUncovered } from "./use-show-uncovered";
 
 const FIGURE = "font-medium text-foreground";
@@ -23,12 +24,17 @@ function Part({ figure, rest }: { figure: string; rest: string }) {
 
 function CoveragePart({ status }: { status: MetadataStatus }) {
   const showUncovered = useShowUncovered();
+  const [mode] = useMetadataMode();
+  const where = mode === "draft" ? " in the live listing" : "";
   if (status.keywords === 0) return <span>No keywords tracked yet</span>;
   if (status.uncovered === 0) {
     return (
       <>
         {status.keywords > 1 ? <span>All </span> : null}
-        <Part figure={pluralize(status.keywords, "keyword")} rest=" covered" />
+        <Part
+          figure={pluralize(status.keywords, "keyword")}
+          rest={` covered${where}`}
+        />
       </>
     );
   }
@@ -40,7 +46,7 @@ function CoveragePart({ status }: { status: MetadataStatus }) {
     >
       <Part
         figure={pluralize(status.uncovered, "keyword")}
-        rest=" not covered"
+        rest={` not covered${where}`}
       />
     </button>
   );

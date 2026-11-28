@@ -45,7 +45,6 @@ export function TargetsBody({
         result={result}
         onEdit={targets.edit}
         onMoved={onMoved}
-        className="rounded-md bg-brand-subtle"
       />
       <Button
         variant="ghost"

@@ -15,9 +15,10 @@ import {
 import { InfoTip } from "@/components/ui/info-tip";
 import { formatCountry, formatList } from "@/lib/format";
 import { marketNote, previewGroups, wasteReason } from "@/lib/listing-draft";
-import { cn } from "@/lib/utils";
+import { coverageVerdict } from "./coverage-verdict";
 import { DraftKeywordList } from "./DraftKeywordList";
 import { DraftTargetList } from "./DraftTargetList";
+import { DRAFT_COVERAGE_ID, VerdictFigures } from "./DraftVerdict";
 import type { CoveragePreview } from "./use-coverage-preview";
 
 const MISSING_SHOWN = 8;
@@ -68,49 +69,56 @@ function WastedWords({ result }: { result: CoveragePreviewResult }) {
   );
 }
 
+function VerdictLine({ result }: { result: CoveragePreviewResult }) {
+  const verdict = coverageVerdict(result);
+  if (!verdict) return null;
+  return (
+    <p
+      role="status"
+      className="flex flex-wrap items-baseline gap-x-2 px-2 text-body"
+    >
+      <VerdictFigures verdict={verdict} />
+    </p>
+  );
+}
+
 function PreviewBody({ result }: { result: CoveragePreviewResult }) {
   const { groups, showCountry } = previewGroups(result);
   const note = marketNote(result);
   return (
     <>
+      {result.markets.length > 0 ? <VerdictLine result={result} /> : null}
       {result.targets ? <DraftTargetList targets={result.targets} /> : null}
-      {result.markets.length > 0 ? (
-        <p className="px-2 text-dense text-muted-foreground">
-          {`${result.counts.gained} newly covered · ${result.counts.lost} no longer covered`}
-        </p>
-      ) : null}
       {note ? (
         <p className="px-2 text-dense text-muted-foreground">{note}</p>
       ) : null}
-      <div className="flex flex-col gap-3">
-        <DraftKeywordList
-          title="No longer covered"
-          rows={groups.lost}
-          shown={Infinity}
-          showCountry={showCountry}
-          tone="down"
-        />
-        <DraftKeywordList
-          title="Newly covered"
-          rows={groups.gained}
-          shown={Infinity}
-          showCountry={showCountry}
-          tone="up"
-        />
-        <DraftKeywordList
-          title="Still not covered"
-          rows={groups.missing}
-          shown={MISSING_SHOWN}
-          showCountry={showCountry}
-        />
-        <DraftKeywordList
-          title="Still covered"
-          rows={groups.kept}
-          shown={0}
-          showCountry={showCountry}
-        />
-        <WastedWords result={result} />
-      </div>
+      <DraftKeywordList
+        title="No longer covered"
+        rows={groups.lost}
+        shown={Infinity}
+        showCountry={showCountry}
+        tone="down"
+      />
+      <DraftKeywordList
+        title="Newly covered"
+        rows={groups.gained}
+        shown={Infinity}
+        showCountry={showCountry}
+        tone="up"
+      />
+      <DraftKeywordList
+        title="Still not covered"
+        rows={groups.missing}
+        shown={MISSING_SHOWN}
+        showCountry={showCountry}
+      />
+      <DraftKeywordList
+        title="Still covered"
+        rows={groups.kept}
+        shown={0}
+        showCountry={showCountry}
+      />
+      <WastedWords result={result} />
     </>
   );
 }
@@ -148,13 +156,7 @@ function judgedIn(result: CoveragePreviewResult | undefined): string | null {
   return `Judged against the keywords you track in ${formatList(result.markets.map(formatCountry))}. Screenshot captions are not counted.`;
 }
 
-export function DraftCoveragePanel({
-  preview,
-  className,
-}: {
-  preview: CoveragePreview;
-  className?: string;
-}) {
+export function DraftCoveragePanel({ preview }: { preview: CoveragePreview }) {
   const headingId = useId();
   const { query, requested, settling } = preview;
   const result = requested && !query.isError ? query.data : undefined;
@@ -163,11 +165,10 @@ export function DraftCoveragePanel({
 
   return (
     <section
+      id={DRAFT_COVERAGE_ID}
+      tabIndex={-1}
       aria-labelledby={headingId}
-      className={cn(
-        "min-w-0 @5xl/metadata:sticky @5xl/metadata:top-20",
-        className,
-      )}
+      className="min-w-0 scroll-mt-28 outline-none"
     >
       <Card>
         <CardHeader className={PANEL_HEADER}>

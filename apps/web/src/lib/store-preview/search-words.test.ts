@@ -13,9 +13,9 @@ describe("searchWords", () => {
     expect(
       searchWords("APP_STORE", "title", "Habit-Tracker: Daily!", []),
     ).toEqual([
-      { word: "habit", repeat: false },
-      { word: "tracker", repeat: false },
-      { word: "daily", repeat: false },
+      { word: "habit", readFrom: null },
+      { word: "tracker", readFrom: null },
+      { word: "daily", readFrom: null },
     ]);
   });
 
@@ -27,21 +27,41 @@ describe("searchWords", () => {
     ).toEqual(["goals", "daily"]);
   });
 
-  it("marks a word the coverage preview reports as repeated", () => {
-    for (const field of ["title", "subtitle"] as const) {
-      expect(
-        searchWords("APP_STORE", field, "Habit goals", [repeated]),
-      ).toEqual([
-        { word: "habit", repeat: true },
-        { word: "goals", repeat: false },
-      ]);
-    }
+  it("marks a repeated word only where search reads it a second time", () => {
+    expect(
+      searchWords("APP_STORE", "subtitle", "Habit goals", [repeated]),
+    ).toEqual([
+      { word: "habit", readFrom: "title" },
+      { word: "goals", readFrom: null },
+    ]);
+    expect(
+      searchWords("APP_STORE", "title", "Habit goals", [repeated]),
+    ).toEqual([
+      { word: "habit", readFrom: null },
+      { word: "goals", readFrom: null },
+    ]);
+  });
+
+  it("reads a word repeated in the subtitle and keyword field from the subtitle", () => {
+    expect(
+      searchWords("APP_STORE", "keywordField", "habit", [
+        { ...repeated, fields: ["keywordField", "subtitle"] },
+      ]),
+    ).toEqual([{ word: "habit", readFrom: "subtitle" }]);
+  });
+
+  it("reads a Google Play repeat from the short description before the description", () => {
+    expect(
+      searchWords("GOOGLE_PLAY", "description", "habit", [
+        { ...repeated, fields: ["description", "shortDescription"] },
+      ]),
+    ).toEqual([{ word: "habit", readFrom: "shortDescription" }]);
   });
 
   it("marks nothing for a field the repeat does not name", () => {
     expect(
       searchWords("APP_STORE", "keywordField", "habit", [repeated]),
-    ).toEqual([{ word: "habit", repeat: false }]);
+    ).toEqual([{ word: "habit", readFrom: null }]);
   });
 
   it("marks nothing for a word the preview calls unused", () => {
@@ -49,13 +69,13 @@ describe("searchWords", () => {
       searchWords("APP_STORE", "subtitle", "habit", [
         { ...repeated, reason: "unused", fields: ["subtitle"] },
       ]),
-    ).toEqual([{ word: "habit", repeat: false }]);
+    ).toEqual([{ word: "habit", readFrom: null }]);
   });
 
   it("marks nothing before the preview answers", () => {
     expect(
       searchWords("APP_STORE", "title", "Habit Habit", [])?.some(
-        ({ repeat }) => repeat,
+        ({ readFrom }) => readFrom !== null,
       ),
     ).toBe(false);
   });
@@ -67,13 +87,13 @@ describe("searchWords", () => {
 
   it("reads the Google Play description, which the store searches", () => {
     expect(searchWords("GOOGLE_PLAY", "description", "Habit", [])).toEqual([
-      { word: "habit", repeat: false },
+      { word: "habit", readFrom: null },
     ]);
   });
 
   it("keeps a Chinese run as one chip", () => {
     expect(searchWords("APP_STORE", "title", "番茄专注时钟", [])).toEqual([
-      { word: "番茄专注时钟", repeat: false },
+      { word: "番茄专注时钟", readFrom: null },
     ]);
   });
 

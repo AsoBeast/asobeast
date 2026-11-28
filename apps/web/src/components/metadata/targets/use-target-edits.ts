@@ -28,7 +28,11 @@ import { useSingleFlight } from "@/lib/single-flight";
 
 const NO_SLOTS: TargetSlots = Array<null>(LISTING_TARGET_LIMIT).fill(null);
 
-export function useTargetEdits(id: string, localization: AppStoreLocalization) {
+export function useTargetEdits(
+  id: string,
+  localization: AppStoreLocalization,
+  onSaved: (result: ListingTargetsSaveResult) => void,
+) {
   const queryClient = useQueryClient();
   const read = useQuery(listingTargetsOptions(id, localization));
   const [edits, setEdits] = useState<TargetSlots | null>(null);
@@ -52,6 +56,7 @@ export function useTargetEdits(id: string, localization: AppStoreLocalization) {
       setOutcome(result);
       invalidateListingTargetsMutation(queryClient, id);
       toast.success(savedSentence(before, result));
+      onSaved(result);
     },
     onError: (failure) =>
       setError(apiErrorMessage(failure, "Could not save the targets")),

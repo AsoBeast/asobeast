@@ -17,13 +17,22 @@ const TONE_TEXT: Record<KeywordListTone, string> = {
   plain: "text-foreground",
 };
 
+const FIELD_PREFIX: Partial<Record<CoveragePreviewKeyword["change"], string>> =
+  { lost: "Was in the", gained: "Now in the" };
+
 function coveringFields(keyword: CoveragePreviewKeyword): string {
-  const verdict = keyword.change === "lost" ? keyword.live : keyword.draft;
+  const lost = keyword.change === "lost";
+  const verdict = lost ? keyword.live : keyword.draft;
   const fields = verdict.fields
     .filter((field) => field.covered)
     .map((field) => METADATA_FIELD_LABELS[field.field]);
-  if (fields.length > 0) return formatList(fields);
-  return verdict.wordsSplit ? "Words split" : "";
+  const prefix = FIELD_PREFIX[keyword.change];
+  if (fields.length > 0) {
+    const list = formatList(fields);
+    return prefix ? `${prefix} ${list.toLowerCase()}` : list;
+  }
+  if (!verdict.wordsSplit) return "";
+  return lost ? "Words were split" : "Words split";
 }
 
 function ShowAllToggle({

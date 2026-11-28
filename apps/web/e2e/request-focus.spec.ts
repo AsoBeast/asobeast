@@ -3333,7 +3333,7 @@ test.describe("support action confirmations keep focus", () => {
   }
 });
 
-test("keeps focus on Save targets while the targets save and after", async ({
+test("keeps focus on Save targets while the targets save, then on Edit targets", async ({
   page,
 }) => {
   await page.request.post(
@@ -3368,5 +3368,8 @@ test("keeps focus on Save targets while the targets save and after", async ({
   await expect(save).toBeFocused();
   held.release();
   await expect(page.getByText(/^Targets saved/)).toBeVisible();
-  await expect(save).toBeFocused();
+  await expect(save).toHaveCount(0);
+  await expect(
+    block.getByRole("button", { name: "Edit targets" }),
+  ).toBeFocused();
 });

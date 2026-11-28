@@ -1,0 +1,54 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+function FoldSummary({ count, changed }: { count: string; changed: boolean }) {
+  return (
+    <span className="flex items-baseline gap-2 pr-8">
+      {changed ? (
+        <span className="text-caption text-muted-foreground">Changed</span>
+      ) : null}
+      <span className="numeric text-label text-faint-foreground">{count}</span>
+    </span>
+  );
+}
+
+export function DescriptionFold({
+  open,
+  onOpenChange,
+  count,
+  changed,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  count: string;
+  changed: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="-ml-2 w-fit">
+            <ChevronRight
+              aria-hidden
+              className="transition-transform duration-150 ease-out data-[open=true]:rotate-90"
+              data-open={open}
+            />
+            <span>Description</span>
+          </Button>
+        </CollapsibleTrigger>
+        {open ? null : <FoldSummary count={count} changed={changed} />}
+      </div>
+      <CollapsibleContent className="pt-2">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}

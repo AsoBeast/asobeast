@@ -1,5 +1,6 @@
 import type { Page, Request } from "@playwright/test";
 import { APP_TARGETS_ID } from "./fixtures.mts";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import {
   TARGETS_FULL_COOKIE,
@@ -19,6 +20,13 @@ const slot = (page: Page, name: string, nth = 0) =>
 const picker = (page: Page) => page.getByRole("dialog");
 const saveButton = (page: Page) =>
   block(page).getByRole("button", { name: "Save targets" });
+const editButton = (page: Page) =>
+  block(page).getByRole("button", { name: "Edit targets" });
+
+async function editTargets(page: Page) {
+  await (await hydrated(editButton(page))).click();
+  await expect(slot(page, "Title")).toBeVisible();
+}
 
 async function seed(page: Page, slots: string[]) {
   await page.request.post(
@@ -51,14 +59,16 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("shows three highlighted slots and seven more", async ({ page }) => {
+test("opens the editor with three role slots and seven more when nothing is saved", async ({
+  page,
+}) => {
   await page.goto(DRAFT);
 
   const roles = block(page).getByRole("list", { name: "Title and subtitle" });
   await expect(roles.getByRole("listitem")).toHaveCount(3);
   await expect(slot(page, "Title")).toBeVisible();
-  await expect(slot(page, "Subtitle", 0)).toBeVisible();
-  await expect(slot(page, "Subtitle", 1)).toBeVisible();
+  await expect(slot(page, "Subtitle 1")).toBeVisible();
+  await expect(slot(page, "Subtitle 2")).toBeVisible();
   await expect(slot(page, "Keyword 4")).toHaveCount(0);
 
   await (
@@ -68,12 +78,12 @@ test("shows three highlighted slots and seven more", async ({ page }) => {
   const more = block(page).getByRole("list", { name: "More keywords" });
   await expect(more.getByRole("listitem")).toHaveCount(7);
   await expect(slot(page, "Keyword 10")).toBeVisible();
-  await expect(block(page)).toContainText("Read in United States");
+  await expect(saveButton(page)).toHaveCount(0);
 });
 
 test("picks a tracked keyword for a slot", async ({ page }) => {
   await page.goto(DRAFT);
-  await expect(saveButton(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(saveButton(page)).toHaveCount(0);
 
   await openPicker(page, "Title");
   await page.keyboard.type("produc");
@@ -88,13 +98,14 @@ test("picks a tracked keyword for a slot", async ({ page }) => {
   ).toBeVisible();
   await expect(slot(page, "Title")).toContainText("Popularity 65");
   await expect(saveButton(page)).not.toHaveAttribute("aria-disabled");
+  await expect(block(page)).toContainText("Read in United States");
 });
 
 test("types a new phrase for a slot", async ({ page }) => {
   const bodies = savedBodies(page);
   await page.goto(DRAFT);
 
-  await openPicker(page, "Subtitle");
+  await openPicker(page, "Subtitle 1");
   await page.keyboard.type("Sleep  Sounds");
   await picker(page)
     .getByRole("option", { name: "Track “sleep sounds”" })
@@ -122,14 +133,18 @@ test("types a new phrase for a slot", async ({ page }) => {
       ],
     },
   ]);
-  await expect(saveButton(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(editButton(page)).toBeFocused();
+  await expect(
+    block(page).getByRole("list", { name: "Saved targets" }),
+  ).toContainText("sleep sounds");
 });
 
 test("refuses a phrase already in another slot", async ({ page }) => {
   await seed(page, ["focus timer"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
-  await openPicker(page, "Subtitle");
+  await openPicker(page, "Subtitle 1");
   await page.keyboard.type("focus timer");
 
   await expect(
@@ -142,21 +157,22 @@ test("refuses a phrase already in another slot", async ({ page }) => {
 test("clears a slot", async ({ page }) => {
   await seed(page, ["focus timer", "study timer", "productivity app"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
-  const remove = slot(page, "Subtitle", 0).getByRole("button", {
-    name: "Remove study timer from Subtitle",
+  const remove = slot(page, "Subtitle 1").getByRole("button", {
+    name: "Remove study timer from Subtitle 1",
   });
   await (await hydrated(remove)).focus();
   await page.keyboard.press("Enter");
 
   await expect(
-    slot(page, "Subtitle", 0).getByRole("button", {
-      name: "Choose a keyword for Subtitle",
+    slot(page, "Subtitle 1").getByRole("button", {
+      name: "Choose a keyword for Subtitle 1",
     }),
   ).toBeFocused();
   await expect(
-    slot(page, "Subtitle", 1).getByRole("button", {
-      name: "productivity app for Subtitle",
+    slot(page, "Subtitle 2").getByRole("button", {
+      name: "productivity app for Subtitle 2",
     }),
   ).toBeVisible();
 });
@@ -165,6 +181,7 @@ test("discards the unsaved slots", async ({ page }) => {
   const bodies = savedBodies(page);
   await seed(page, ["focus timer"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   await (
     await hydrated(
@@ -177,8 +194,35 @@ test("discards the unsaved slots", async ({ page }) => {
 
   await expect(
     slot(page, "Title").getByRole("button", { name: "focus timer for Title" }),
-  ).toBeVisible();
+  ).toBeFocused();
+  await expect(saveButton(page)).toHaveCount(0);
   expect(bodies).toEqual([]);
+});
+
+test("shows saved targets in one row and edits them on request", async ({
+  page,
+}) => {
+  await seed(page, ["focus timer", "study timer"]);
+  await page.goto(DRAFT);
+
+  const saved = block(page).getByRole("list", { name: "Saved targets" });
+  await expect(saved).toContainText("Titlefocus timer");
+  await expect(saved).toContainText("Subtitle 1study timer");
+  await expect(saved).toContainText("Subtitle 2Not set");
+  await expect(slot(page, "Title")).toHaveCount(0);
+  await expect(saveButton(page)).toHaveCount(0);
+
+  await (await hydrated(editButton(page))).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    slot(page, "Title").getByRole("button", { name: "focus timer for Title" }),
+  ).toBeFocused();
+
+  const done = block(page).getByRole("button", { name: "Done" });
+  await done.focus();
+  await page.keyboard.press("Enter");
+  await expect(saved).toBeVisible();
+  await expect(editButton(page)).toBeFocused();
 });
 
 test("is absent for a Google Play app and a competitor", async ({ page }) => {
@@ -204,13 +248,13 @@ test("fills the role slots with the top three by opportunity", async ({
     slot(page, "Title").getByRole("button", { name: "focus timer for Title" }),
   ).toBeVisible();
   await expect(
-    slot(page, "Subtitle", 0).getByRole("button", {
-      name: "productivity app for Subtitle",
+    slot(page, "Subtitle 1").getByRole("button", {
+      name: "productivity app for Subtitle 1",
     }),
   ).toBeVisible();
   await expect(
-    slot(page, "Subtitle", 1).getByRole("button", {
-      name: "study timer for Subtitle",
+    slot(page, "Subtitle 2").getByRole("button", {
+      name: "study timer for Subtitle 2",
     }),
   ).toBeVisible();
   await expect(block(page)).not.toContainText("pomodoro");
@@ -220,6 +264,7 @@ test("fills the role slots with the top three by opportunity", async ({
 test("says when there is nothing to fill", async ({ page }) => {
   await seed(page, ["focus timer", "study timer", "productivity app"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   const useTopThree = block(page).getByRole("button", { name: "Use top 3" });
   await expect(useTopThree).toHaveAttribute("aria-disabled", "true");
@@ -234,10 +279,11 @@ test("moves a keyword up into the title slot from the keyboard", async ({
 }) => {
   await seed(page, ["focus timer", "study timer"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   await (
     await hydrated(
-      slot(page, "Subtitle", 0).getByRole("button", {
+      slot(page, "Subtitle 1").getByRole("button", {
         name: "Move study timer up",
       }),
     )
@@ -250,8 +296,8 @@ test("moves a keyword up into the title slot from the keyboard", async ({
   await expect(movedUp).toBeFocused();
   await expect(movedUp).toHaveAttribute("aria-disabled", "true");
   await expect(
-    slot(page, "Subtitle", 0).getByRole("button", {
-      name: "focus timer for Subtitle",
+    slot(page, "Subtitle 1").getByRole("button", {
+      name: "focus timer for Subtitle 1",
     }),
   ).toBeVisible();
   await page.keyboard.press("Enter");
@@ -261,6 +307,7 @@ test("moves a keyword up into the title slot from the keyboard", async ({
 test("announces the move", async ({ page }) => {
   await seed(page, ["focus timer", "study timer"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   await (
     await hydrated(
@@ -271,7 +318,7 @@ test("announces the move", async ({ page }) => {
   ).click();
 
   await expect(block(page).getByRole("status")).toHaveText(
-    "focus timer moved to Subtitle",
+    "focus timer moved to Subtitle 1",
   );
 });
 
@@ -320,9 +367,9 @@ test("offers to track a target in a market that reads it now", async ({
   await (await hydrated(track)).focus();
   await page.keyboard.press("Enter");
 
-  await expect(slot(page, "Title")).not.toContainText("Not tracked in");
+  await expect(block(page)).not.toContainText("Not tracked in");
   await expect(track).toHaveCount(0);
-  await expect(saveButton(page)).toBeFocused();
+  await expect(editButton(page)).toBeFocused();
   expect(bodies).toEqual([
     {
       slots: [
@@ -370,8 +417,9 @@ test("updates after saving targets", async ({ page }) => {
   await seed(page, ["habit tracker"]);
   await page.goto(DRAFT);
   await expect(targetRows(page)).toHaveCount(1);
+  await expect(slot(page, "Title")).toContainText("Not tracked in");
 
-  await openPicker(page, "Subtitle");
+  await openPicker(page, "Subtitle 1");
   await page.keyboard.type("study timer");
   await picker(page)
     .getByRole("option", { name: /study timer/ })
@@ -408,6 +456,7 @@ const chip = (page: Page, name: string, phrase: string) =>
 test("shows a suggestion beside each target", async ({ page }) => {
   await seed(page, ["productivity app", "study timer"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   await expect(
     slot(page, "Title").getByRole("button", {
@@ -415,7 +464,7 @@ test("shows a suggestion beside each target", async ({ page }) => {
     }),
   ).toHaveText("Title");
   await expect(
-    slot(page, "Subtitle", 0).getByRole("button", {
+    slot(page, "Subtitle 1").getByRole("button", {
       name: "Suggested: Skip. Why study timer belongs there",
     }),
   ).toHaveText("Skip");
@@ -426,6 +475,7 @@ test("explains the suggestion in one sentence with graded figures", async ({
 }) => {
   await seed(page, ["productivity app"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   await (await hydrated(chip(page, "Title", "productivity app"))).click();
 
@@ -469,6 +519,7 @@ test("closes the popover with Escape and returns focus to the chip", async ({
 }) => {
   await seed(page, ["productivity app"]);
   await page.goto(DRAFT);
+  await editTargets(page);
   const trigger = chip(page, "Title", "productivity app");
 
   await (await hydrated(trigger)).focus();
@@ -487,6 +538,7 @@ test("applies the suggestions as an unsaved edit", async ({ page }) => {
   const bodies = savedBodies(page);
   await seed(page, ["study timer", "productivity app"]);
   await page.goto(DRAFT);
+  await editTargets(page);
   const apply = block(page).getByRole("button", { name: "Apply suggestions" });
 
   await (await hydrated(apply)).focus();
@@ -498,8 +550,8 @@ test("applies the suggestions as an unsaved edit", async ({ page }) => {
     }),
   ).toBeVisible();
   await expect(
-    slot(page, "Subtitle", 0).getByRole("button", {
-      name: "Choose a keyword for Subtitle",
+    slot(page, "Subtitle 1").getByRole("button", {
+      name: "Choose a keyword for Subtitle 1",
     }),
   ).toBeVisible();
   await expect(
@@ -539,6 +591,7 @@ test("applies the suggestions as an unsaved edit", async ({ page }) => {
 test("is unavailable when the order already matches", async ({ page }) => {
   await seed(page, ["productivity app"]);
   await page.goto(DRAFT);
+  await editTargets(page);
 
   const apply = block(page).getByRole("button", { name: "Apply suggestions" });
   await expect(apply).toHaveAttribute("aria-disabled", "true");
@@ -556,7 +609,7 @@ test("keeps the header actions inside the card on a phone", async ({
   await page.goto(DRAFT);
 
   const tip = block(page).getByRole("button", {
-    name: "About suggested fields",
+    name: "About target keywords",
   });
   await expect(tip).toBeVisible();
   const card = block(page).locator('[data-slot="card"]');
@@ -571,4 +624,74 @@ test("keeps the header actions inside the card on a phone", async ({
   );
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   expect(tipRight).toBeLessThanOrEqual(right);
+});
+
+test("keeps focus on Apply suggestions when it restores the saved order", async ({
+  page,
+}) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+  await editTargets(page);
+
+  await slot(page, "Title")
+    .getByRole("button", { name: "Move productivity app down" })
+    .click();
+  await expect(saveButton(page)).toBeVisible();
+  const apply = block(page).getByRole("button", { name: "Apply suggestions" });
+  await apply.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "productivity app for Title",
+    }),
+  ).toBeVisible();
+  await expect(saveButton(page)).toHaveCount(0);
+  await expect(apply).toBeFocused();
+});
+
+test("hands focus to the first slot when a save leaves no target", async ({
+  page,
+}) => {
+  await seed(page, ["focus timer"]);
+  await page.goto(DRAFT);
+  await editTargets(page);
+
+  await slot(page, "Title")
+    .getByRole("button", { name: "Remove focus timer from Title" })
+    .click();
+  await saveButton(page).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText(/^Targets saved/)).toBeVisible();
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "Choose a keyword for Title",
+    }),
+  ).toBeFocused();
+});
+
+test("leaves focus where the viewer moved it while the targets save", async ({
+  page,
+}) => {
+  await seed(page, ["focus timer"]);
+  await page.goto(DRAFT);
+  await editTargets(page);
+  await openPicker(page, "Subtitle 1");
+  await page.keyboard.type("study timer");
+  await picker(page)
+    .getByRole("option", { name: /study timer/ })
+    .click();
+  const held = await holdRequest(page, TARGETS_PATH, "PUT");
+
+  await saveButton(page).click();
+  const title = page
+    .getByRole("region", { name: "Draft listing" })
+    .getByRole("textbox", { name: "Title", exact: true });
+  await title.focus();
+  held.release();
+
+  await expect(page.getByText(/^Targets saved/)).toBeVisible();
+  await expect(editButton(page)).toBeVisible();
+  await expect(title).toBeFocused();
 });
