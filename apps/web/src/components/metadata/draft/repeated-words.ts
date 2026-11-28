@@ -1,14 +1,14 @@
 import { countChars, tokenize, type LintIssue } from "@asobeast/shared";
 import { formatList } from "@/lib/format";
 
-const REPEAT_RULES: Readonly<Record<string, string>> = {
-  "repeats-title-word": "title",
-  "repeats-subtitle-word": "subtitle",
-};
+const REPEAT_RULES: ReadonlyMap<string, string> = new Map([
+  ["repeats-title-word", "title"],
+  ["repeats-subtitle-word", "subtitle"],
+]);
 const LISTED_WORDS = 6;
 
 const repeatedWord = (issue: LintIssue): string | null =>
-  issue.rule in REPEAT_RULES && issue.offendingText
+  REPEAT_RULES.has(issue.rule) && issue.offendingText
     ? issue.offendingText
     : null;
 
@@ -47,7 +47,7 @@ export function groupLintIssues(issues: readonly LintIssue[]): LintIssue[] {
       severity: first.severity,
       message: wordsSentence(
         group.flatMap((issue) => repeatedWord(issue) ?? []),
-        REPEAT_RULES[first.rule],
+        REPEAT_RULES.get(first.rule) ?? first.rule,
       ),
     };
   });

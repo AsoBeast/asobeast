@@ -3,7 +3,11 @@
 import { Suspense, useId, type ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { defaultLocalizationIn } from "@asobeast/shared";
+import {
+  defaultLocalizationIn,
+  type AppStoreLocalization,
+  type KeywordFieldSuggestion,
+} from "@asobeast/shared";
 import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
@@ -53,6 +57,42 @@ function NoKeywords({ id }: { id: string }) {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function KeywordFieldPanel({
+  id,
+  keywordFields,
+  canDraft,
+  suggestion,
+  homeLocalization,
+  ownerWhileLoading,
+}: {
+  id: string;
+  keywordFields: boolean;
+  canDraft: boolean;
+  suggestion: KeywordFieldSuggestion | null;
+  homeLocalization: AppStoreLocalization;
+  ownerWhileLoading: boolean;
+}) {
+  if (keywordFields) {
+    return (
+      <AppLocalizationsSection
+        id={id}
+        canDraft={canDraft}
+        suggestion={suggestion}
+        homeLocalization={homeLocalization}
+        ownerWhileLoading={ownerWhileLoading}
+      />
+    );
+  }
+  if (!suggestion) return null;
+  return (
+    <KeywordFieldSuggestionCard
+      id={id}
+      homeLocalization={homeLocalization}
+      suggestion={suggestion}
+    />
   );
 }
 
@@ -190,21 +230,14 @@ export function MetadataAuditView({
           <NoKeywords id={id} />
         )}
 
-        {keywordFields ? (
-          <AppLocalizationsSection
-            id={id}
-            canDraft={drafting}
-            suggestion={suggestion}
-            homeLocalization={homeLocalization}
-            ownerWhileLoading={ownerWhileLoading}
-          />
-        ) : suggestion ? (
-          <KeywordFieldSuggestionCard
-            id={id}
-            homeLocalization={homeLocalization}
-            suggestion={suggestion}
-          />
-        ) : null}
+        <KeywordFieldPanel
+          id={id}
+          keywordFields={keywordFields}
+          canDraft={drafting}
+          suggestion={suggestion}
+          homeLocalization={homeLocalization}
+          ownerWhileLoading={ownerWhileLoading}
+        />
 
         {drafting ? (
           <MetadataAssistantPanel

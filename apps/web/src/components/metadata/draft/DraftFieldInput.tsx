@@ -41,6 +41,7 @@ function LiveValue({
   onRevert: () => void;
 }) {
   const label = METADATA_FIELD_LABELS[field].toLowerCase();
+  const shown = live.trim() === "" ? "empty" : live;
   return (
     <p className="flex min-w-0 items-baseline gap-2 text-caption">
       {field === "description" ? (
@@ -56,7 +57,7 @@ function LiveValue({
             title={live}
             className="min-w-0 truncate text-muted-foreground"
           >
-            {live.trim() === "" ? "empty" : live}
+            {shown}
           </span>
         </>
       )}

@@ -9,6 +9,17 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+function FoldSummary({ count, changed }: { count: string; changed: boolean }) {
+  return (
+    <span className="flex items-baseline gap-2 pr-8">
+      {changed ? (
+        <span className="text-caption text-muted-foreground">Changed</span>
+      ) : null}
+      <span className="numeric text-label text-faint-foreground">{count}</span>
+    </span>
+  );
+}
+
 export function DescriptionFold({
   open,
   onOpenChange,
@@ -35,18 +46,7 @@ export function DescriptionFold({
             <span>Description</span>
           </Button>
         </CollapsibleTrigger>
-        {open ? null : (
-          <span className="flex items-baseline gap-2 pr-8">
-            {changed ? (
-              <span className="text-caption text-muted-foreground">
-                Changed
-              </span>
-            ) : null}
-            <span className="numeric text-label text-faint-foreground">
-              {count}
-            </span>
-          </span>
-        )}
+        {open ? null : <FoldSummary count={count} changed={changed} />}
       </div>
       <CollapsibleContent className="pt-2">{children}</CollapsibleContent>
     </Collapsible>
