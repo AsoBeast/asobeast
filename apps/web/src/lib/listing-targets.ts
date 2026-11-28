@@ -14,11 +14,11 @@ import { formatCountry, formatList } from "./format";
 
 export type TargetSlots = readonly (string | null)[];
 
-const ROLE_LABELS = { title: "Title", subtitle: "Subtitle" } as const;
-
 export function slotLabel(index: number): string {
   const role = targetSlotRole(index);
-  return role === "extra" ? `Keyword ${index + 1}` : ROLE_LABELS[role];
+  if (role === "title") return "Title";
+  if (role === "subtitle") return `Subtitle ${index}`;
+  return `Keyword ${index + 1}`;
 }
 
 export const savedSlots = (result: ListingTargetsResult): TargetSlots =>
@@ -209,6 +209,9 @@ export const notTrackedLines = (
     ([text, countries]) =>
       `${text} in ${formatList(countries.map(formatCountry))}`,
   );
+
+export const hasSavedTargets = (result: ListingTargetsResult): boolean =>
+  result.slots.some((slot) => slot !== null);
 
 export const missingMarkets = (result: ListingTargetsResult): string[] =>
   result.readers.filter((country) =>

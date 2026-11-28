@@ -16,10 +16,12 @@ export function TargetsFooter({
   targets,
   result,
   saveRef,
+  onDone,
 }: {
   targets: TargetEdits;
   result: ListingTargetsResult | undefined;
   saveRef: RefObject<HTMLButtonElement | null>;
+  onDone: (() => void) | undefined;
 }) {
   const focusAfter = useFocusAfterCommit();
   const idle = !targets.edited || targets.saving;
@@ -42,16 +44,25 @@ export function TargetsFooter({
             {marketCount(missing.length)}
           </Button>
         ) : null}
-        <Button
-          variant="outline"
-          aria-disabled={idle || undefined}
-          onClick={() => {
-            if (!idle) targets.discard();
-          }}
-        >
-          <RotateCcw aria-hidden />
-          <span>Discard changes</span>
-        </Button>
+        {targets.edited ? (
+          <Button
+            variant="outline"
+            aria-disabled={targets.saving || undefined}
+            onClick={(event) => {
+              if (targets.saving) return;
+              focusAfter(saveRef.current, event.currentTarget);
+              targets.discard();
+            }}
+          >
+            <RotateCcw aria-hidden />
+            <span>Discard changes</span>
+          </Button>
+        ) : null}
+        {onDone ? (
+          <Button variant="outline" onClick={onDone}>
+            <span>Done</span>
+          </Button>
+        ) : null}
         <Button
           ref={saveRef}
           aria-disabled={idle || undefined}
