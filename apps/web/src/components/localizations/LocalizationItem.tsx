@@ -34,9 +34,11 @@ export function LocalizationItem({
   drafted,
   editorKey = "stored",
   onProposalSettled,
+  unlistedIn = null,
 }: {
   id: string;
   item: AppLocalizationItem;
+  unlistedIn?: string | null;
   managed?: boolean;
   sync?: AppLocalizationStoreSync | null;
   onDraft: ((localization: AppStoreLocalization) => void) | null;
@@ -80,6 +82,9 @@ export function LocalizationItem({
       </AccordionTrigger>
       <AccordionContent forceMount className="px-4 pb-4">
         <div className="flex flex-col gap-3">
+          {unlistedIn ? (
+            <UnlistedHomeNote storefront={unlistedIn} name={name} />
+          ) : null}
           {onDraft && !managed ? (
             <div>
               <Button
@@ -111,5 +116,20 @@ export function LocalizationItem({
         </div>
       </AccordionContent>
     </AccordionItem>
+  );
+}
+
+function UnlistedHomeNote({
+  storefront,
+  name,
+}: {
+  storefront: string;
+  name: string;
+}) {
+  const code = storefront.toUpperCase();
+  return (
+    <p className="text-caption text-muted-foreground">
+      <span>{`The ${code} storefront does not list ${name}. It shows this listing by default, so AsoBeast reads it as the ${code} default.`}</span>
+    </p>
   );
 }

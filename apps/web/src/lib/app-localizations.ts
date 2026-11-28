@@ -8,6 +8,7 @@ import {
   isStorefront,
   tokenize,
   parseKeywordField,
+  readsLocalization,
   storefrontsReading,
   type AppDetail,
   type AppLocalizationItem,
@@ -184,6 +185,15 @@ export function openLocalization(
   return (
     items.find((item) => item.localization === requested)?.localization ?? ""
   );
+}
+
+export function unlistedHome(
+  result: Pick<AppLocalizationsResult, "home" | "localizations">,
+): AppStoreLocalization | null {
+  const home = result.localizations.find((item) => item.origin === "home");
+  return home && !readsLocalization(result.home, home.localization)
+    ? home.localization
+    : null;
 }
 
 export interface KeywordFieldDraft {
