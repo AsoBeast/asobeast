@@ -38,6 +38,9 @@ import {
 import { useCoveragePreview, useTargetedRequest } from "./use-coverage-preview";
 import { useListingDraft } from "./use-listing-draft";
 
+const DRAFT_RAIL =
+  "col-span-12 flex min-w-0 flex-col gap-6 @4xl/metadata:sticky @4xl/metadata:top-20 @4xl/metadata:col-span-5";
+
 function KeywordFieldNotice({ field }: { field: DraftKeywordField }) {
   if (field.managed) return <StoreFieldNotice sync={field.sync} />;
   if (field.settled || !field.read.isError) return null;
@@ -151,7 +154,7 @@ export function ListingDraftEditor({
       ) : null}
       <section
         aria-labelledby={headingId}
-        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7 @5xl/metadata:row-span-2"
+        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @4xl/metadata:col-span-7"
       >
         <h2 id={headingId} className="sr-only">
           Draft listing
@@ -186,16 +189,15 @@ export function ListingDraftEditor({
           </Button>
         </div>
       </section>
-      <DraftStorePreview
-        id={id}
-        values={values}
-        localization={localization}
-        className="col-span-12 min-w-0 @5xl/metadata:col-span-5"
-      />
-      <DraftCoveragePanel
-        preview={preview}
-        className="col-span-12 @5xl/metadata:col-span-5"
-      />
+      <div className={DRAFT_RAIL}>
+        <DraftCoveragePanel preview={preview} />
+        <DraftStorePreview
+          id={id}
+          values={values}
+          localization={localization}
+          className="min-w-0"
+        />
+      </div>
     </div>
   );
 }

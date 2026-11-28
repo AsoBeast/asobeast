@@ -15,6 +15,8 @@ const panel = (page: Page) =>
   page.getByRole("region", { name: "Draft coverage" });
 const section = (page: Page, name: string) =>
   panel(page).getByRole("list", { name });
+const verdict = (page: Page) =>
+  panel(page).getByRole("status").filter({ hasText: "tracked keywords" });
 
 async function withCookie(page: Page, name: string, value: string) {
   await page
@@ -170,10 +172,47 @@ test("lists the keywords a new title covers and loses", async ({ page }) => {
   await expect(section(page, "Newly covered")).toContainText("Germany");
   await expect(section(page, "No longer covered")).toContainText("focus timer");
   await expect(
-    panel(page).getByText("1 newly covered · 1 no longer covered", {
-      exact: true,
+    verdict(page).getByTitle("The draft covers 2 of 3, fair", { exact: true }),
+  ).toBeVisible();
+  await expect(verdict(page).getByRole("img")).toHaveCount(0);
+});
+
+test("says how many tracked keywords the draft covers against the live listing", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+
+  await (
+    await hydrated(field(page, "Subtitle"))
+  ).fill("Study timer for deep work");
+
+  await expect(
+    verdict(page).getByTitle("The draft covers 1 of 3, weak", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    verdict(page).getByRole("img", {
+      name: "down 1 from the 2 the live listing covers",
     }),
   ).toBeVisible();
+});
+
+test("puts draft coverage beside the fields and above the store preview at 1280 px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Productivity App");
+  await expect(verdict(page)).toBeVisible();
+
+  const fields = await editor(page).boundingBox();
+  const coverage = await panel(page).boundingBox();
+  const store = await page
+    .getByRole("region", { name: "In the store" })
+    .boundingBox();
+  if (!fields || !coverage || !store) throw new Error("missing region");
+  expect(coverage.x).toBeGreaterThanOrEqual(fields.x + fields.width);
+  expect(Math.abs(coverage.y - fields.y)).toBeLessThan(2);
+  expect(store.y).toBeGreaterThan(coverage.y + coverage.height);
 });
 
 test("judges a comma in the title as a space", async ({ page }) => {

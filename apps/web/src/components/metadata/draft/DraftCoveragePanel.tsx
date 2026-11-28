@@ -12,10 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DeltaChip } from "@/components/ui/delta-chip";
+import { GradedNumber } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
-import { formatCountry, formatList } from "@/lib/format";
+import { formatCountry, formatList, formatNumber } from "@/lib/format";
+import { grade } from "@/lib/grade";
 import { marketNote, previewGroups, wasteReason } from "@/lib/listing-draft";
-import { cn } from "@/lib/utils";
+import { coverageShare, coverageVerdict } from "./coverage-verdict";
 import { DraftKeywordList } from "./DraftKeywordList";
 import { DraftTargetList } from "./DraftTargetList";
 import type { CoveragePreview } from "./use-coverage-preview";
@@ -68,17 +71,42 @@ function WastedWords({ result }: { result: CoveragePreviewResult }) {
   );
 }
 
+function VerdictLine({ result }: { result: CoveragePreviewResult }) {
+  const verdict = coverageVerdict(result);
+  if (!verdict) return null;
+  const change = verdict.draft - verdict.live;
+  return (
+    <p
+      role="status"
+      className="flex flex-wrap items-baseline gap-x-2 px-2 text-body"
+    >
+      <span>Covers</span>
+      <GradedNumber
+        value={`${formatNumber(verdict.draft)} of ${formatNumber(verdict.total)}`}
+        grade={grade("coverage", coverageShare(verdict))}
+        label="The draft covers"
+        className="font-medium"
+      />
+      <span>tracked keywords</span>
+      {change === 0 ? null : (
+        <DeltaChip
+          value={change}
+          polarity="higher-is-better"
+          period={`from the ${formatNumber(verdict.live)} the live listing covers`}
+          className="self-center text-label"
+        />
+      )}
+    </p>
+  );
+}
+
 function PreviewBody({ result }: { result: CoveragePreviewResult }) {
   const { groups, showCountry } = previewGroups(result);
   const note = marketNote(result);
   return (
     <>
+      {result.markets.length > 0 ? <VerdictLine result={result} /> : null}
       {result.targets ? <DraftTargetList targets={result.targets} /> : null}
-      {result.markets.length > 0 ? (
-        <p className="px-2 text-dense text-muted-foreground">
-          {`${result.counts.gained} newly covered · ${result.counts.lost} no longer covered`}
-        </p>
-      ) : null}
       {note ? (
         <p className="px-2 text-dense text-muted-foreground">{note}</p>
       ) : null}
@@ -148,13 +176,7 @@ function judgedIn(result: CoveragePreviewResult | undefined): string | null {
   return `Judged against the keywords you track in ${formatList(result.markets.map(formatCountry))}. Screenshot captions are not counted.`;
 }
 
-export function DraftCoveragePanel({
-  preview,
-  className,
-}: {
-  preview: CoveragePreview;
-  className?: string;
-}) {
+export function DraftCoveragePanel({ preview }: { preview: CoveragePreview }) {
   const headingId = useId();
   const { query, requested, settling } = preview;
   const result = requested && !query.isError ? query.data : undefined;
@@ -162,13 +184,7 @@ export function DraftCoveragePanel({
   const footer = judgedIn(result);
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className={cn(
-        "min-w-0 @5xl/metadata:sticky @5xl/metadata:top-20",
-        className,
-      )}
-    >
+    <section aria-labelledby={headingId} className="min-w-0">
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
