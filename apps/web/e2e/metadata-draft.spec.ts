@@ -760,6 +760,11 @@ test("puts the live panels under one Live listing heading in draft mode", async 
   page,
 }) => {
   await page.goto("/apps/app-1/metadata?mode=draft");
+  await expect(
+    page.getByRole("button", {
+      name: "1 keyword not covered in the live listing",
+    }),
+  ).toBeVisible();
   const live = page.getByRole("region", { name: "Live listing" });
   await expect(
     live.getByRole("heading", { name: "Keyword coverage" }),

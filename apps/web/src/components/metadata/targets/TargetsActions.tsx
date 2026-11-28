@@ -1,6 +1,5 @@
 "use client";
 
-import type { RefObject } from "react";
 import type { ListingTargetsResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,13 +39,13 @@ export function TargetsActions({
   result,
   onEdit,
   onApplied,
-  saveRef,
+  onFocusSave,
 }: {
   slots: TargetSlots;
   result: ListingTargetsResult;
   onEdit: (next: TargetSlots) => void;
   onApplied: (sentence: string) => void;
-  saveRef: RefObject<HTMLButtonElement | null>;
+  onFocusSave: () => void;
 }) {
   const placements = placementsByPhrase(result);
   return (
@@ -55,7 +54,7 @@ export function TargetsActions({
         refusal={topThreeRefusal(slots, result.candidates)}
         onPress={() => {
           onEdit(withTopThree(slots, result.candidates));
-          saveRef.current?.focus();
+          onFocusSave();
         }}
       >
         Use top 3
@@ -65,7 +64,7 @@ export function TargetsActions({
         onPress={() => {
           onEdit(applyPlacements(slots, placements));
           onApplied("Targets reordered to match the suggestions");
-          saveRef.current?.focus();
+          onFocusSave();
         }}
       >
         Apply suggestions

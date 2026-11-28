@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { Ref } from "react";
 import { RotateCcw } from "lucide-react";
 import type { ListingTargetsResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,18 @@ export function TargetsFooter({
   targets,
   result,
   saveRef,
+  firstSlot,
   onDone,
 }: {
   targets: TargetEdits;
   result: ListingTargetsResult | undefined;
-  saveRef: RefObject<HTMLButtonElement | null>;
+  saveRef: Ref<HTMLButtonElement>;
+  firstSlot: () => HTMLElement | null;
   onDone: (() => void) | undefined;
 }) {
   const focusAfter = useFocusAfterCommit();
-  const idle = !targets.edited || targets.saving;
   const missing = result && !targets.edited ? missingMarkets(result) : [];
+  if (!targets.edited && !onDone && missing.length === 0) return null;
 
   return (
     <CardFooter className="flex-wrap justify-between">
@@ -35,27 +37,11 @@ export function TargetsFooter({
           <Button
             variant="outline"
             aria-disabled={targets.saving || undefined}
-            onClick={(event) => {
-              if (targets.saving) return;
-              focusAfter(saveRef.current, event.currentTarget);
-              targets.save(true);
+            onClick={() => {
+              if (!targets.saving) targets.save(true);
             }}
           >
             {marketCount(missing.length)}
-          </Button>
-        ) : null}
-        {targets.edited ? (
-          <Button
-            variant="outline"
-            aria-disabled={targets.saving || undefined}
-            onClick={(event) => {
-              if (targets.saving) return;
-              focusAfter(saveRef.current, event.currentTarget);
-              targets.discard();
-            }}
-          >
-            <RotateCcw aria-hidden />
-            <span>Discard changes</span>
           </Button>
         ) : null}
         {onDone ? (
@@ -63,15 +49,31 @@ export function TargetsFooter({
             <span>Done</span>
           </Button>
         ) : null}
-        <Button
-          ref={saveRef}
-          aria-disabled={idle || undefined}
-          onClick={() => {
-            if (!idle) targets.save();
-          }}
-        >
-          Save targets
-        </Button>
+        {targets.edited ? (
+          <>
+            <Button
+              variant="outline"
+              aria-disabled={targets.saving || undefined}
+              onClick={(event) => {
+                if (targets.saving) return;
+                focusAfter(firstSlot(), event.currentTarget);
+                targets.discard();
+              }}
+            >
+              <RotateCcw aria-hidden />
+              <span>Discard changes</span>
+            </Button>
+            <Button
+              ref={saveRef}
+              aria-disabled={targets.saving || undefined}
+              onClick={() => {
+                if (!targets.saving) targets.save();
+              }}
+            >
+              Save targets
+            </Button>
+          </>
+        ) : null}
       </span>
     </CardFooter>
   );

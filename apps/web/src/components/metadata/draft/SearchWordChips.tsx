@@ -15,7 +15,7 @@ export function SearchWordChips({
   return (
     <ul
       aria-label={label}
-      className="flex list-none flex-wrap items-center gap-1 p-0"
+      className="flex list-none flex-wrap items-center gap-1 p-0 pt-0.5"
     >
       {words.slice(0, SHOWN_WORDS).map(({ word, readFrom }) => (
         <li

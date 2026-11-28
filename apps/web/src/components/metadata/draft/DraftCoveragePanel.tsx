@@ -92,35 +92,33 @@ function PreviewBody({ result }: { result: CoveragePreviewResult }) {
       {note ? (
         <p className="px-2 text-dense text-muted-foreground">{note}</p>
       ) : null}
-      <div className="flex flex-col gap-3">
-        <DraftKeywordList
-          title="No longer covered"
-          rows={groups.lost}
-          shown={Infinity}
-          showCountry={showCountry}
-          tone="down"
-        />
-        <DraftKeywordList
-          title="Newly covered"
-          rows={groups.gained}
-          shown={Infinity}
-          showCountry={showCountry}
-          tone="up"
-        />
-        <DraftKeywordList
-          title="Still not covered"
-          rows={groups.missing}
-          shown={MISSING_SHOWN}
-          showCountry={showCountry}
-        />
-        <DraftKeywordList
-          title="Still covered"
-          rows={groups.kept}
-          shown={0}
-          showCountry={showCountry}
-        />
-        <WastedWords result={result} />
-      </div>
+      <DraftKeywordList
+        title="No longer covered"
+        rows={groups.lost}
+        shown={Infinity}
+        showCountry={showCountry}
+        tone="down"
+      />
+      <DraftKeywordList
+        title="Newly covered"
+        rows={groups.gained}
+        shown={Infinity}
+        showCountry={showCountry}
+        tone="up"
+      />
+      <DraftKeywordList
+        title="Still not covered"
+        rows={groups.missing}
+        shown={MISSING_SHOWN}
+        showCountry={showCountry}
+      />
+      <DraftKeywordList
+        title="Still covered"
+        rows={groups.kept}
+        shown={0}
+        showCountry={showCountry}
+      />
+      <WastedWords result={result} />
     </>
   );
 }

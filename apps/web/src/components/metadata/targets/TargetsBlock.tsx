@@ -33,6 +33,7 @@ import { useTargetEdits, type TargetEdits } from "./use-target-edits";
 
 const EDIT_FOCUS = "targets:edit";
 const OPEN_FOCUS = "targets:open";
+const SAVE_FOCUS = "targets:save";
 
 const DOC_LINK = "font-medium text-foreground link-underline";
 
@@ -119,8 +120,13 @@ export function TargetsBlock({
   const editing = open || held;
   const showMore =
     more ?? MORE_SLOTS.some((index) => targets.slots[index] !== null);
-  const saveRef = useRef<HTMLButtonElement>(null);
+  const saveRef = useRef<HTMLButtonElement | null>(null);
+  const claimSave = useFocusClaim(SAVE_FOCUS);
   const group = useFocusGroupClaim(OPEN_FOCUS, !editing);
+  const focusSave = () => {
+    if (saveRef.current) saveRef.current.focus();
+    else armFocusHandoff(SAVE_FOCUS);
+  };
 
   return (
     <section aria-labelledby={headingId} className="col-span-12 min-w-0">
@@ -143,7 +149,7 @@ export function TargetsBlock({
                 result={result}
                 onEdit={targets.edit}
                 onApplied={setMoved}
-                saveRef={saveRef}
+                onFocusSave={focusSave}
               />
             ) : null}
             <TargetsTip />
@@ -174,7 +180,13 @@ export function TargetsBlock({
           <TargetsFooter
             targets={targets}
             result={result}
-            saveRef={saveRef}
+            saveRef={(node) => {
+              saveRef.current = node;
+              claimSave(node);
+            }}
+            firstSlot={() =>
+              group.current?.querySelector<HTMLElement>("button") ?? null
+            }
             onDone={held ? undefined : close}
           />
         ) : null}

@@ -35,7 +35,7 @@ export function DraftTargetList({
   const headingId = useId();
   if (targets.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1 px-2">
+    <div className="flex flex-col gap-1 border-t border-border-subtle px-2 pt-3 first:border-t-0 first:pt-0">
       <h3 id={headingId} className={LIST_HEAD}>
         <span className="text-foreground">Targets</span>
       </h3>

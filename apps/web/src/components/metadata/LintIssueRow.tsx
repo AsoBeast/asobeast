@@ -15,7 +15,10 @@ export function LintIssueRow({
   return (
     <li
       data-rule={issue.rule}
-      className="flex flex-wrap items-baseline gap-x-2 text-dense text-muted-foreground"
+      className={cn(
+        "items-baseline gap-x-2 text-dense text-muted-foreground",
+        showRule ? "flex flex-wrap" : "grid grid-cols-[auto_minmax(0,1fr)]",
+      )}
     >
       <span
         data-slot="lint-severity"

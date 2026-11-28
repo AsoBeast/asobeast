@@ -24,7 +24,7 @@ export function DescriptionFold({
 }) {
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3">
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm" className="-ml-2 w-fit">
             <ChevronRight
@@ -36,7 +36,7 @@ export function DescriptionFold({
           </Button>
         </CollapsibleTrigger>
         {open ? null : (
-          <span className="flex items-baseline gap-2">
+          <span className="flex items-baseline gap-2 pr-8">
             {changed ? (
               <span className="text-caption text-muted-foreground">
                 Changed

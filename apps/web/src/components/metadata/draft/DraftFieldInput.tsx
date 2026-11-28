@@ -113,6 +113,7 @@ export function DraftFieldInput({
     dir: "auto",
     "aria-describedby": countId,
     "aria-invalid": count.over > 0,
+    className: "scroll-mt-32 @4xl/metadata:scroll-mt-20",
   } as const;
 
   return (
@@ -145,7 +146,7 @@ export function DraftFieldInput({
         <Textarea
           {...control}
           rows={field === "description" ? 8 : 3}
-          className="resize-y"
+          className={cn(control.className, "resize-y")}
           onChange={(event) => onChange(event.target.value)}
         />
       ) : (
@@ -157,12 +158,6 @@ export function DraftFieldInput({
       {value === live || readOnly ? null : (
         <LiveValue field={field} live={live} onRevert={onRevert} />
       )}
-      {words ? (
-        <SearchWordChips
-          label={`Words search reads in the ${METADATA_FIELD_LABELS[field].toLowerCase()}`}
-          words={words}
-        />
-      ) : null}
       {issues.length > 0 ? (
         <ul className="flex list-none flex-col gap-1 p-0">
           {groupLintIssues(issues).map((issue, index) => (
@@ -173,6 +168,12 @@ export function DraftFieldInput({
             />
           ))}
         </ul>
+      ) : null}
+      {words ? (
+        <SearchWordChips
+          label={`Words search reads in the ${METADATA_FIELD_LABELS[field].toLowerCase()}`}
+          words={words}
+        />
       ) : null}
       {children}
     </div>

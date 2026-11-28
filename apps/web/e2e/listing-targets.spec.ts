@@ -77,12 +77,12 @@ test("opens the editor with three role slots and seven more when nothing is save
   const more = block(page).getByRole("list", { name: "More keywords" });
   await expect(more.getByRole("listitem")).toHaveCount(7);
   await expect(slot(page, "Keyword 10")).toBeVisible();
-  await expect(block(page)).toContainText("Read in United States");
+  await expect(saveButton(page)).toHaveCount(0);
 });
 
 test("picks a tracked keyword for a slot", async ({ page }) => {
   await page.goto(DRAFT);
-  await expect(saveButton(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(saveButton(page)).toHaveCount(0);
 
   await openPicker(page, "Title");
   await page.keyboard.type("produc");
@@ -97,6 +97,7 @@ test("picks a tracked keyword for a slot", async ({ page }) => {
   ).toBeVisible();
   await expect(slot(page, "Title")).toContainText("Popularity 65");
   await expect(saveButton(page)).not.toHaveAttribute("aria-disabled");
+  await expect(block(page)).toContainText("Read in United States");
 });
 
 test("types a new phrase for a slot", async ({ page }) => {
@@ -192,7 +193,8 @@ test("discards the unsaved slots", async ({ page }) => {
 
   await expect(
     slot(page, "Title").getByRole("button", { name: "focus timer for Title" }),
-  ).toBeVisible();
+  ).toBeFocused();
+  await expect(saveButton(page)).toHaveCount(0);
   expect(bodies).toEqual([]);
 });
 
