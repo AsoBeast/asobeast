@@ -3,6 +3,49 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0](https://github.com/AsoBeast/asobeast/compare/v2.0.0...v2.1.0) (2026-11-28)
+
+
+### Features
+
+* **actions:** judge every market listing in the metadata action rules ([#904](https://github.com/AsoBeast/asobeast/issues/904)) ([b7d870a](https://github.com/AsoBeast/asobeast/commit/b7d870ac1177e79ed78babbc181a3a7364a1911f))
+* **actions:** measure a market lint action by its store rule problems ([#948](https://github.com/AsoBeast/asobeast/issues/948)) ([c901658](https://github.com/AsoBeast/asobeast/commit/c901658b9c6120e20b6e78ce089cc0b443f13549))
+* **actions:** push keywords toward the top 10 in every market listing ([#949](https://github.com/AsoBeast/asobeast/issues/949)) ([274a03c](https://github.com/AsoBeast/asobeast/commit/274a03cda487a0825bcebb95c657ae7312b38175))
+* **keywords:** pick target keywords for each localization ([#937](https://github.com/AsoBeast/asobeast/issues/937)) ([e301eca](https://github.com/AsoBeast/asobeast/commit/e301eca1d20af48001ac236a4d1e2b8f3a491408))
+* **keywords:** suggest where each target keyword belongs ([#939](https://github.com/AsoBeast/asobeast/issues/939)) ([912eff4](https://github.com/AsoBeast/asobeast/commit/912eff4e9ffc5832eb2ea57c54a37cb9f3bf5ceb))
+* **metadata:** preview the keywords a draft listing would cover ([#920](https://github.com/AsoBeast/asobeast/issues/920)) ([ecf327f](https://github.com/AsoBeast/asobeast/commit/ecf327fb6fd1ee5a12fbc593044def8e941d1609))
+* **rankings:** judge google play short descriptions in search results ([#956](https://github.com/AsoBeast/asobeast/issues/956)) ([0e47f3d](https://github.com/AsoBeast/asobeast/commit/0e47f3d2d0b500da826adf2bda598e7d4c5014be))
+* **rankings:** record that the store search returned no results ([#916](https://github.com/AsoBeast/asobeast/issues/916)) ([8750894](https://github.com/AsoBeast/asobeast/commit/8750894e57d9c1742bd6b5998aeae1f544d8eb73))
+* **rankings:** show where each ranking app puts the keyword ([#943](https://github.com/AsoBeast/asobeast/issues/943)) ([72f2bb6](https://github.com/AsoBeast/asobeast/commit/72f2bb6a9745fff1aa349b99f3ccbfed15cff7b8))
+* **shared:** skip russian, ukrainian, korean and arabic function words ([#959](https://github.com/AsoBeast/asobeast/issues/959)) ([c77efea](https://github.com/AsoBeast/asobeast/commit/c77efeaac45aa7256f430371899e546dcb999896))
+* **web:** compare new ratings with tracked competitors ([#958](https://github.com/AsoBeast/asobeast/issues/958)) ([6cb074a](https://github.com/AsoBeast/asobeast/commit/6cb074aca1f7163e78bc47b8b8fa06748a4183e4))
+* **web:** draft a listing on the metadata page ([#921](https://github.com/AsoBeast/asobeast/issues/921)) ([9a2c266](https://github.com/AsoBeast/asobeast/commit/9a2c2666ce06d6cdac3b4dcaf80630ae554abe15))
+* **web:** open keyword ideas from a tracked keyword row ([#919](https://github.com/AsoBeast/asobeast/issues/919)) ([6a13ec0](https://github.com/AsoBeast/asobeast/commit/6a13ec0da9df7df3a0bd2145683cfa7b0a3fb12a))
+* **web:** pick target keywords at the top of the draft ([#938](https://github.com/AsoBeast/asobeast/issues/938)) ([9765b3b](https://github.com/AsoBeast/asobeast/commit/9765b3bd21bdc450a257b1da4f4a321e17380583))
+* **web:** preview the listing in the store with its cut off point ([#933](https://github.com/AsoBeast/asobeast/issues/933)) ([fe69f67](https://github.com/AsoBeast/asobeast/commit/fe69f67951fffe23b7a7b01a1ea94ce7716f0bc3))
+* **web:** put the draft coverage verdict beside the listing draft ([#963](https://github.com/AsoBeast/asobeast/issues/963)) ([c23e1a8](https://github.com/AsoBeast/asobeast/commit/c23e1a8083962401c4c555a132aedc95bd9572b0))
+* **web:** redesign the share card for social feeds ([#945](https://github.com/AsoBeast/asobeast/issues/945)) ([3d0e0a2](https://github.com/AsoBeast/asobeast/commit/3d0e0a275eb56ab84d930acf20a3e4ff53b71b1c))
+* **web:** share a rank chart as a social card ([#942](https://github.com/AsoBeast/asobeast/issues/942)) ([9753283](https://github.com/AsoBeast/asobeast/commit/9753283e97add2489190e0d9e146e3bb0a427f22))
+* **web:** show description word density and count words like the stores ([#944](https://github.com/AsoBeast/asobeast/issues/944)) ([214c1b9](https://github.com/AsoBeast/asobeast/commit/214c1b9d26baa402bda5a813296ad60757d5cda1))
+* **web:** show the average of new ratings beside the overall average ([#941](https://github.com/AsoBeast/asobeast/issues/941)) ([528a7c0](https://github.com/AsoBeast/asobeast/commit/528a7c0a9d3ab2bbd22037297ca07da8004ccfe2))
+* **web:** work out the new ratings average on google play ([#957](https://github.com/AsoBeast/asobeast/issues/957)) ([a392148](https://github.com/AsoBeast/asobeast/commit/a392148839f3cb37b9824f369d5ea4fbc8f55cf3))
+
+
+### Bug Fixes
+
+* **actions:** keep the actions of an app the run could not load ([b7d870a](https://github.com/AsoBeast/asobeast/commit/b7d870ac1177e79ed78babbc181a3a7364a1911f))
+* **api:** name the Marketing role and trim the promotional text ([#890](https://github.com/AsoBeast/asobeast/issues/890)) ([870f96e](https://github.com/AsoBeast/asobeast/commit/870f96e1f7562638212571e666d926818525bb8a))
+* **apps:** name a home listing whose storefront omits its language ([#962](https://github.com/AsoBeast/asobeast/issues/962)) ([727ed3d](https://github.com/AsoBeast/asobeast/commit/727ed3da34b1d933d953264cea1a898bc114ac29))
+* **apps:** name an english listing english in a non english storefront ([#960](https://github.com/AsoBeast/asobeast/issues/960)) ([5226542](https://github.com/AsoBeast/asobeast/commit/52265421503e5e1a8d2c12dc77e30742adcca4c5))
+* **apps:** read the default listing for its own localization tag ([#925](https://github.com/AsoBeast/asobeast/issues/925)) ([dd7901f](https://github.com/AsoBeast/asobeast/commit/dd7901fa9141f55547a726348008c47d473d02b9))
+* **keywords:** label a native only default listing by its language ([#953](https://github.com/AsoBeast/asobeast/issues/953)) ([39d531a](https://github.com/AsoBeast/asobeast/commit/39d531a4075d4fbac6c909de41d3393dd4844ac6))
+* **metadata:** audit the default listing for its own localization tag ([#924](https://github.com/AsoBeast/asobeast/issues/924)) ([79f7f48](https://github.com/AsoBeast/asobeast/commit/79f7f484f5fba40a425e142715d14cdc062c50bb))
+* **providers:** tell a refusing proxy from a broken parser ([#929](https://github.com/AsoBeast/asobeast/issues/929)) ([debc48f](https://github.com/AsoBeast/asobeast/commit/debc48f5eb99b5d95e66d8c3a1a8aee0fcb5303c))
+* **web:** keep the metadata page still while its last parts load ([#952](https://github.com/AsoBeast/asobeast/issues/952)) ([04c1952](https://github.com/AsoBeast/asobeast/commit/04c195288e9b6179db1b986dba39cbd720c72f73))
+* **web:** keep the word density from moving the page when it renders ([#950](https://github.com/AsoBeast/asobeast/issues/950)) ([4ff7ae9](https://github.com/AsoBeast/asobeast/commit/4ff7ae9b757ddc5e961f297ece3f633e8080da9d))
+* **web:** scale the share of voice axis to the data ([#931](https://github.com/AsoBeast/asobeast/issues/931)) ([161877c](https://github.com/AsoBeast/asobeast/commit/161877cfeeed5912c1612b540569dc2a236bc754))
+* **web:** show a scheduled plan switch and a declined trial card ([#930](https://github.com/AsoBeast/asobeast/issues/930)) ([ec636bf](https://github.com/AsoBeast/asobeast/commit/ec636bf1ac0e43a484af724e83012abf6942cd17))
+
 ## [2.0.0](https://github.com/AsoBeast/asobeast/compare/v1.16.0...v2.0.0) (2026-11-22)
 
 
