@@ -104,6 +104,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "An app whose listing is only in English, added from a country whose store speaks another language such as Germany, France or Japan, used to have its listing called by that country's language, with a keyword field box in a language the app does not have. After its next refresh the keyword field editor, the audit and the draft call it English.",
       },
       {
+        kind: "fixed",
+        title: "A Polish app added from Germany stays Polish",
+        text: "An app written only in a language its store country does not offer, such as a Polish app added from Germany, used to have its listing called by that country's language. After its next refresh it is called by the language it is written in. If you import your keyword fields from App Store Connect, AsoBeast now also names the exact language your listing uses there, such as English (U.S.) in Germany, so your imported field is the one the editor shows first.",
+      },
+      {
         kind: "new",
         title: "Why the proxy provider refuses",
         text: "The capacity page in the admin area now says when the proxy provider is turning requests away and why, from the answer it gave: a plan or quota that ran out, credentials it does not accept, or the status it refused with.",
